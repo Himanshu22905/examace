@@ -370,7 +370,7 @@ function ExamsSection() {
               <div style={{ fontSize: 11, color: G.muted }}>Students</div>
             </div>
           </div>
-          <GlowButton onClick={() => {}}>Explore {e.key} Tests →</GlowButton>
+          <GlowButton onClick={() => window.location.href="/login"}>Explore {e.key} Tests →</GlowButton>
         </div>
         <div>
           <div style={{ marginBottom: 20 }}>
@@ -630,7 +630,7 @@ function Footer() {
 
 /* ─── MAIN APP ───────────────────────────────────────────────── */
 export default function App() {
-  const handleCTA = () => alert("🚀 In the next step, we'll build the Login & Registration page!");
+  const handleCTA = () => window.location.href = "/login";
 
   return (
     <>
