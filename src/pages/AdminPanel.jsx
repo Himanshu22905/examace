@@ -872,13 +872,33 @@ function DashboardPage({ setPage }) {
 
 // ── ROOT ──────────────────────────────────────────────────────────────────────
 export default function AdminPanel() {
-  const [page,setPage] = useState("dashboard");
-  const nav = [
-    {id:"dashboard",icon:"⊞", label:"Dashboard"},
-    {id:"questions",icon:"❓", label:"Questions"},
-    {id:"tests",    icon:"📋", label:"Tests"},
-    {id:"users",    icon:"👥", label:"Users"},
-    {id:"attempts", icon:"📊", label:"Attempts"},
+  const [page, setPage]       = useState("dashboard");
+  const [allowed, setAllowed] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  const ADMIN_EMAIL = "himanshu.mzn2019@gmail.com"; // 👈 REPLACE WITH YOUR EMAIL
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user && user.email === ADMIN_EMAIL) {
+        setAllowed(true);
+      } else {
+        window.location.href = "/login";
+      }
+      setChecking(false);
+    });
+  }, []);
+
+  if (checking) return (
+    <>
+      <style>{CSS}</style>
+      <div style={{ minHeight:"100vh", background:"#020408", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ display:"inline-block", width:36, height:36, border:"2px solid #152236", borderTopColor:"#38BDF8", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
+      </div>
+    </>
+  );
+
+  if (!allowed) return null;
   ];
   return (
     <>
