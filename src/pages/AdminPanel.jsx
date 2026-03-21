@@ -603,12 +603,11 @@ function QuestionsPage() {
               <Tag color={dc[q.difficulty]||"#E8B84B"}>{q.difficulty}</Tag>
               <Tag color={q.status==="active"?"#34D399":q.status==="draft"?"#FCD34D":"#6A8CAC"}>{q.status}</Tag>
               <div style={{ display:"flex", gap:5 }}>
-                <button className="btn btn-ghost" style={{ padding:"5px 10px", fontSize:11 }} onClick={()=>{setEditQ(q);setModal(true);}}>✏️</button>
-                <button className="btn" style={{ padding:"5px 10px", fontSize:11, background:q.status==="active"?"#FB923C22":"#34D39922", color:q.status==="active"?"#FB923C":"#34D399", border:`1px solid ${q.status==="active"?"#FB923C33":"#34D39933"}` }} onClick={()=>toggleStatus(q)}>
-                  {q.status==="active"?"⏸":"▶"}
-                </button>
-                <button className="btn btn-danger" style={{ padding:"5px 10px", fontSize:11 }} onClick={()=>deleteQ(q.id)}>🗑</button>
-              </div>
+  <button className="btn" style={{ padding:"5px 10px", fontSize:11, background:t.status==="published"?"#FB923C22":"#34D39922", color:t.status==="published"?"#FB923C":"#34D399", border:`1px solid ${t.status==="published"?"#FB923C33":"#34D39933"}` }} onClick={()=>toggleTest(t)}>
+    {t.status==="published"?"⏸ Hide":"▶ Show"}
+  </button>
+  <button className="btn btn-ghost" style={{ padding:"5px 10px", fontSize:11 }} onClick={()=>deleteTest(t.id)}>🗑 Delete</button>
+</div>
             </div>
           ))}
         </div>
@@ -725,11 +724,17 @@ function TestsPage() {
   };
   useEffect(()=>{fetch();},[]);
 
-  const deleteTest = async (id) => {
-    if (!window.confirm("Delete this test?")) return;
-    await supabase.from("tests").delete().eq("id",id);
-    setToast({msg:"Test deleted",type:"success"}); fetch();
-  };
+ const deleteTest = async (id) => {
+  const confirmed = window.confirm("Are you sure you want to delete this test? This cannot be undone.");
+  if (!confirmed) return;
+  const { error } = await supabase.from("tests").delete().eq("id", id);
+  if (error) {
+    setToast({ msg:"Error deleting test: " + error.message, type:"error" });
+  } else {
+    setToast({ msg:"Test deleted successfully", type:"success" });
+    fetch();
+  }
+};
   const toggleTest = async (t) => {
     const s = t.status==="published"?"inactive":"published";
     await supabase.from("tests").update({status:s}).eq("id",t.id);
