@@ -904,7 +904,6 @@ export default function AdminPanel() {
   );
 
   if (!allowed) return null;
-  ];
   return (
     <>
       <style>{CSS}</style>
