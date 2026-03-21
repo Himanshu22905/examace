@@ -180,7 +180,6 @@ export default function AuthSystem() {
                 <div className="subtitle">Choose how you want to sign in</div>
                 <div style={{ display:"flex", gap:8, marginBottom:24 }}>
                   <button className={`btn-method${loginMethod==="email"?" active":""}`} onClick={() => { setLoginMethod("email"); reset(); }}>✉️ Email</button>
-                  <button className={`btn-method${loginMethod==="phone"?" active":""}`} onClick={() => { setLoginMethod("phone"); reset(); }}>📱 Mobile OTP</button>
                 </div>
                 {error   && <div className="error">{error}</div>}
                 {message && <div className="success">{message}</div>}
