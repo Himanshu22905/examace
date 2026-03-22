@@ -884,16 +884,44 @@ export default function AdminPanel() {
   const ADMIN_EMAIL = "himanshu.mzn2019@gmail.com"; // 👈 REPLACE WITH YOUR EMAIL
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user && user.email === ADMIN_EMAIL) {
-        setAllowed(true);
-      } else {
-        window.location.href = "/login";
-      }
+  supabase.auth.getUser().then(({ data: { user } }) => {
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+    if (user.email === ADMIN_EMAIL) {
+      setAllowed(true);
       setChecking(false);
-    });
-  }, []);
+    } else {
+      setAllowed(false);
+      setChecking(false);
+    }
+  });
+}, []);
 
+if (checking) return (
+  <>
+    <style>{CSS}</style>
+    <div style={{ minHeight:"100vh", background:"#020408", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
+      <div style={{ width:36, height:36, border:"2px solid #152236", borderTopColor:"#38BDF8", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
+      <div style={{ color:"#6A8CAC", fontSize:14 }}>Checking access...</div>
+    </div>
+  </>
+);
+
+if (!allowed) return (
+  <>
+    <style>{CSS}</style>
+    <div style={{ minHeight:"100vh", background:"#020408", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16, padding:20 }}>
+      <div style={{ fontSize:64 }}>🚫</div>
+      <div style={{ fontWeight:800, fontSize:22 }}>Access Denied</div>
+      <div style={{ color:"#6A8CAC", fontSize:14, textAlign:"center" }}>You don't have admin access.</div>
+      <button style={{ padding:"12px 28px", background:"linear-gradient(135deg,#38BDF8,#0EA5E9)", border:"none", borderRadius:10, color:"#020408", fontWeight:700, fontSize:14, cursor:"pointer" }} onClick={() => window.location.href="/"}>
+        Go to Home
+      </button>
+    </div>
+  </>
+);
   if (checking) return (
     <>
       <style>{CSS}</style>
