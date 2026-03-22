@@ -323,7 +323,8 @@ export default function Dashboard() {
   );
 
   // ── PROFILE ───────────────────────────────────────────────────────────────
-  const ProfilePage = () => (
+  const ProfilePage = () => {
+  return (
     <div style={{ padding:28, maxWidth:700 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
         <div>
