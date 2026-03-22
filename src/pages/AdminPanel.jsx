@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
+// ── ADMIN CREDENTIALS ─────────────────────────────────────────────────────────
+const ADMIN_EMAIL    = "Himanshu.mzn2019@gmail.com";
+const ADMIN_PASSWORD = "P@ndit123";
+
+// ── STYLES ────────────────────────────────────────────────────────────────────
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -39,7 +44,7 @@ const CSS = `
   .drop-zone{border:2px dashed #152236;border-radius:14px;padding:40px;text-align:center;cursor:pointer;transition:all 0.2s;}
   .drop-zone:hover{border-color:#38BDF8;background:#38BDF808;}
   .label{font-size:12px;font-weight:700;color:#6A8CAC;display:block;margin-bottom:7px;letter-spacing:0.5px;}
-  .spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid rgba(2,4,8,0.3);border-top-color:#020408;border-radius:50%;animation:spin 0.7s linear infinite;}
+  .sm-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(2,4,8,0.3);border-top-color:#020408;border-radius:50%;animation:spin 0.7s linear infinite;}
 `;
 
 const SUBJECTS = {
@@ -50,21 +55,53 @@ const SUBJECTS = {
   RRB:["Quantitative Aptitude","Reasoning","General Science","General Awareness"],
 };
 const EXAMS = Object.keys(SUBJECTS);
+const L = {fontSize:12,fontWeight:700,color:"#6A8CAC",display:"block",marginBottom:7,letterSpacing:0.5};
 
-function Toast({ message, type, onDone }) {
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function Toast({message,type,onDone}){
   useEffect(()=>{const t=setTimeout(onDone,3000);return()=>clearTimeout(t);},[]);
   const color=type==="success"?"#34D399":type==="error"?"#F87171":"#38BDF8";
-  return(
-    <div className="toast" style={{border:`1.5px solid ${color}44`}}>
-      <span style={{fontSize:20}}>{type==="success"?"✅":type==="error"?"❌":"ℹ️"}</span>
-      <span style={{fontSize:14,fontWeight:600}}>{message}</span>
-    </div>
-  );
+  return(<div className="toast" style={{border:`1.5px solid ${color}44`}}><span style={{fontSize:20}}>{type==="success"?"✅":type==="error"?"❌":"ℹ️"}</span><span style={{fontSize:14,fontWeight:600}}>{message}</span></div>);
 }
 function Tag({children,color}){return<span className="tag" style={{background:color+"1A",color,border:`1px solid ${color}30`}}>{children}</span>;}
 function Mono({children,color="#38BDF8",size=13}){return<span style={{fontFamily:"'Fira Code',monospace",fontSize:size,color,fontWeight:500}}>{children}</span>;}
-function Spinner({size=36}){return<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:60,gap:14}}><div style={{width:size,height:size,border:"2px solid #152236",borderTopColor:"#38BDF8",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><div style={{color:"#6A8CAC",fontSize:13}}>Loading...</div></div>;}
-const L={fontSize:12,fontWeight:700,color:"#6A8CAC",display:"block",marginBottom:7,letterSpacing:0.5};
+function Loading(){return(<div style={{textAlign:"center",padding:60}}><div style={{width:36,height:36,border:"2px solid #152236",borderTopColor:"#38BDF8",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 16px"}}/><div style={{color:"#6A8CAC",fontSize:13}}>Loading...</div></div>);}
+
+// ── PASSWORD SCREEN ───────────────────────────────────────────────────────────
+function PasswordScreen({onUnlock}){
+  const[pass,setPass]=useState("");
+  const[error,setError]=useState("");
+  const[show,setShow]=useState(false);
+  const check=()=>{
+    if(pass===ADMIN_PASSWORD){sessionStorage.setItem("admin_unlocked","true");onUnlock();}
+    else{setError("Wrong password! Try again.");setPass("");}
+  };
+  return(
+    <>
+      <style>{CSS}</style>
+      <div style={{minHeight:"100vh",background:"#020408",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+        <div style={{background:"#080C18",border:"1px solid #152236",borderRadius:24,padding:44,width:"100%",maxWidth:420,textAlign:"center"}}>
+          <div style={{fontSize:56,marginBottom:16}}>🔐</div>
+          <div style={{fontWeight:800,fontSize:24,marginBottom:8}}>Admin Panel</div>
+          <div style={{color:"#6A8CAC",fontSize:14,marginBottom:32}}>mockies.in — Restricted Access</div>
+          {error&&<div style={{background:"#F8717122",border:"1px solid #F8717144",borderRadius:10,padding:"10px 14px",color:"#F87171",fontSize:13,marginBottom:16}}>{error}</div>}
+          <div style={{position:"relative",marginBottom:16}}>
+            <input type={show?"text":"password"} placeholder="Enter admin password" value={pass}
+              onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&check()}
+              style={{width:"100%",background:"#020408",border:"1.5px solid #0E1A2C",borderRadius:10,padding:"13px 48px 13px 16px",color:"#EEF2FF",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:14,outline:"none"}}/>
+            <button onClick={()=>setShow(!show)} style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#6A8CAC",cursor:"pointer",fontSize:16}}>{show?"🙈":"👁"}</button>
+          </div>
+          <button onClick={check} style={{width:"100%",padding:14,background:"linear-gradient(135deg,#38BDF8,#0EA5E9)",border:"none",borderRadius:12,color:"#020408",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:10}}>
+            Unlock Admin Panel →
+          </button>
+          <button onClick={()=>window.location.href="/"} style={{width:"100%",padding:12,background:"transparent",border:"1px solid #152236",borderRadius:12,color:"#6A8CAC",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:14,fontWeight:600,cursor:"pointer"}}>
+            ← Back to Site
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
 
 // ── QUESTION MODAL ────────────────────────────────────────────────────────────
 function QuestionModal({question,onClose,onSaved}){
@@ -126,7 +163,7 @@ function QuestionModal({question,onClose,onSaved}){
         <div style={{display:"flex",gap:10,paddingTop:16,borderTop:"1px solid #0E1A2C"}}>
           <button className="btn btn-ghost" style={{flex:1}} onClick={onClose}>Cancel</button>
           <button className="btn btn-success" style={{flex:2}} onClick={handleSave} disabled={loading}>
-            {loading?<><span className="spinner-sm"/>&nbsp;Saving...</>:`✅ ${editing?"Update":"Save"} Question`}
+            {loading?<><span className="sm-spin"/>&nbsp;Saving...</>:`✅ ${editing?"Update":"Save"} Question`}
           </button>
         </div>
       </div>
@@ -145,56 +182,36 @@ function BulkUploadModal({onClose,onSaved}){
   const[error,setError]=useState("");
   const[dragOver,setDragOver]=useState(false);
   const fileRef=useRef();
-
-  const sampleCSV=`question_text,option_a,option_b,option_c,option_d,correct_answer,topic,difficulty,explanation
-What is 25% of 200?,25,50,75,100,B,Percentage,Easy,25% of 200 = (25/100) x 200 = 50
-All dogs are animals. All animals have life. Do all dogs have life?,Yes,No,Maybe,Cannot say,A,Syllogism,Medium,All dogs are animals and all animals have life so all dogs have life.`;
-
-  const downloadSample=()=>{
-    const blob=new Blob([sampleCSV],{type:"text/csv"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;a.download="examace_sample.csv";a.click();
-  };
-
+  const sample=`question_text,option_a,option_b,option_c,option_d,correct_answer,topic,difficulty,explanation\nWhat is 25% of 200?,25,50,75,100,B,Percentage,Easy,25% of 200 = 50`;
+  const downloadSample=()=>{const b=new Blob([sample],{type:"text/csv"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="sample.csv";a.click();};
   const parseCSV=(text)=>{
     setError("");
     const lines=text.trim().split("\n").filter(l=>l.trim());
-    if(lines.length<2){setError("File must have header row and at least 1 question");return;}
+    if(lines.length<2){setError("Need header row + at least 1 question");return;}
     const headers=lines[0].split(",").map(h=>h.trim().toLowerCase());
     const required=["question_text","option_a","option_b","option_c","option_d","correct_answer","topic","difficulty","explanation"];
     const missing=required.filter(r=>!headers.includes(r));
-    if(missing.length>0){setError("Missing columns: "+missing.join(", "));return;}
+    if(missing.length>0){setError("Missing: "+missing.join(", "));return;}
     const rows=[];
     for(let i=1;i<lines.length;i++){
       const vals=lines[i].split(",");
       if(vals.length<9)continue;
-      const row={};
-      headers.forEach((h,idx)=>row[h]=vals[idx]?.trim()||"");
+      const row={};headers.forEach((h,idx)=>row[h]=vals[idx]?.trim()||"");
       const ansMap={A:0,B:1,C:2,D:3,"0":0,"1":1,"2":2,"3":3};
-      const correctIdx=ansMap[row.correct_answer?.toUpperCase()];
-      if(correctIdx===undefined)continue;
-      rows.push({exam,subject,question_text:row.question_text,options:[row.option_a,row.option_b,row.option_c,row.option_d],correct_answer:correctIdx,topic:row.topic,difficulty:row.difficulty||"Medium",explanation:row.explanation,status:"active"});
+      const ci=ansMap[row.correct_answer?.toUpperCase()];
+      if(ci===undefined)continue;
+      rows.push({exam,subject,question_text:row.question_text,options:[row.option_a,row.option_b,row.option_c,row.option_d],correct_answer:ci,topic:row.topic,difficulty:row.difficulty||"Medium",explanation:row.explanation,status:"active"});
     }
-    if(rows.length===0){setError("No valid questions found. Check your CSV format.");return;}
+    if(rows.length===0){setError("No valid questions found");return;}
     setParsed(rows);setStep(3);
   };
-
-  const handleFile=(file)=>{
-    if(!file)return;
-    const reader=new FileReader();
-    reader.onload=e=>{setRawText(e.target.result);parseCSV(e.target.result);};
-    reader.readAsText(file);
-  };
-
+  const handleFile=(file)=>{if(!file)return;const r=new FileReader();r.onload=e=>{setRawText(e.target.result);parseCSV(e.target.result);};r.readAsText(file);};
   const handleUpload=async()=>{
     setUploading(true);
     const{error}=await supabase.from("questions").insert(parsed);
     if(error){setError(error.message);setUploading(false);return;}
-    setStep(4);setUploading(false);
-    onSaved(`${parsed.length} questions uploaded!`);
+    setStep(4);setUploading(false);onSaved(`${parsed.length} questions uploaded!`);
   };
-
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal" style={{maxWidth:680}}>
@@ -202,7 +219,7 @@ All dogs are animals. All animals have life. Do all dogs have life?,Yes,No,Maybe
           <div style={{fontWeight:800,fontSize:20}}>📤 Bulk Upload Questions</div>
           <button onClick={onClose} style={{background:"transparent",border:"none",color:"#6A8CAC",fontSize:22,cursor:"pointer"}}>✕</button>
         </div>
-        <div style={{display:"flex",gap:6,marginBottom:28}}>
+        <div style={{display:"flex",gap:6,marginBottom:24}}>
           {["Format","Upload","Preview","Done"].map((s,i)=>(
             <div key={s} style={{display:"flex",alignItems:"center",gap:6,flex:1}}>
               <div style={{width:24,height:24,borderRadius:"50%",background:step>i+1?"#34D399":step===i+1?"#38BDF8":"#152236",color:step>=i+1?"#020408":"#6A8CAC",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{step>i+1?"✓":i+1}</div>
@@ -212,95 +229,48 @@ All dogs are animals. All animals have life. Do all dogs have life?,Yes,No,Maybe
           ))}
         </div>
         {error&&<div style={{background:"#F8717122",border:"1px solid #F8717144",borderRadius:10,padding:"10px 14px",color:"#F87171",fontSize:13,marginBottom:16}}>{error}</div>}
-        {step===1&&(
-          <>
-            <div style={{background:"#050810",border:"1px solid #0E1A2C",borderRadius:14,padding:20,marginBottom:20}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>📋 Required CSV Format</div>
-              <div style={{fontFamily:"'Fira Code',monospace",fontSize:11,color:"#38BDF8",background:"#020408",borderRadius:8,padding:"12px 14px",lineHeight:1.8}}>
-                question_text, option_a, option_b, option_c, option_d,<br/>correct_answer, topic, difficulty, explanation
-              </div>
-              <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:6}}>
-                {[["correct_answer","Use A, B, C, or D"],["difficulty","Easy, Medium, or Hard"],["topic","e.g. Algebra, Syllogism"]].map(([k,v])=>(
-                  <div key={k} style={{display:"flex",gap:8,fontSize:13}}>
-                    <span style={{color:"#E8B84B",fontWeight:700,flexShrink:0}}>{k}:</span>
-                    <span style={{color:"#6A8CAC"}}>{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:20}}>
-              <div><label style={L}>EXAM FOR ALL QUESTIONS</label><select className="select" value={exam} onChange={e=>{setExam(e.target.value);setSubject(SUBJECTS[e.target.value][0]);}}>{EXAMS.map(e=><option key={e}>{e}</option>)}</select></div>
-              <div><label style={L}>SUBJECT FOR ALL QUESTIONS</label><select className="select" value={subject} onChange={e=>setSubject(e.target.value)}>{SUBJECTS[exam].map(s=><option key={s}>{s}</option>)}</select></div>
-            </div>
-            <div style={{display:"flex",gap:10}}>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={downloadSample}>📥 Download Sample CSV</button>
-              <button className="btn btn-primary" style={{flex:2}} onClick={()=>setStep(2)}>Next: Upload →</button>
-            </div>
-          </>
-        )}
-        {step===2&&(
-          <>
-            <div className="drop-zone" style={{marginBottom:20,borderColor:dragOver?"#38BDF8":undefined,background:dragOver?"#38BDF808":undefined}}
-              onDragOver={e=>{e.preventDefault();setDragOver(true);}}
-              onDragLeave={()=>setDragOver(false)}
-              onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}}
-              onClick={()=>fileRef.current.click()}>
-              <div style={{fontSize:48,marginBottom:12}}>📂</div>
-              <div style={{fontWeight:700,fontSize:16,marginBottom:8}}>Drop your CSV file here</div>
-              <div style={{color:"#6A8CAC",fontSize:14}}>or click to browse</div>
-              <input ref={fileRef} type="file" accept=".csv,.txt" style={{display:"none"}} onChange={e=>handleFile(e.target.files[0])}/>
-            </div>
-            <div style={{textAlign:"center",color:"#6A8CAC",fontSize:13,marginBottom:12}}>— OR paste CSV content —</div>
-            <textarea className="input" rows={6} placeholder="Paste CSV content here..." value={rawText} onChange={e=>setRawText(e.target.value)} style={{resize:"vertical",marginBottom:16,fontFamily:"'Fira Code',monospace",fontSize:12}}/>
-            <div style={{display:"flex",gap:10}}>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setStep(1)}>← Back</button>
-              <button className="btn btn-primary" style={{flex:2}} onClick={()=>parseCSV(rawText)}>Parse & Preview →</button>
-            </div>
-          </>
-        )}
-        {step===3&&(
-          <>
-            <div style={{background:"#34D39914",border:"1px solid #34D39933",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontSize:20}}>✅</span>
-              <span style={{fontSize:14,fontWeight:600,color:"#34D399"}}>{parsed.length} questions ready! Review then save.</span>
-            </div>
-            <div style={{maxHeight:280,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-              {parsed.map((q,i)=>(
-                <div key={i} style={{background:"#050810",border:"1px solid #0E1A2C",borderRadius:10,padding:"12px 14px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                    <span style={{fontFamily:"'Fira Code',monospace",fontSize:11,color:"#6A8CAC"}}>Q{i+1}</span>
-                    <div style={{display:"flex",gap:6}}>
-                      <Tag color="#6A8CAC">{q.topic}</Tag>
-                      <Tag color={q.difficulty==="Easy"?"#34D399":q.difficulty==="Hard"?"#F87171":"#E8B84B"}>{q.difficulty}</Tag>
-                    </div>
-                  </div>
-                  <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>{q.question_text?.slice(0,80)}...</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
-                    {q.options.map((opt,j)=>(
-                      <div key={j} style={{fontSize:11,padding:"4px 8px",borderRadius:6,background:j===q.correct_answer?"#34D39918":"#020408",color:j===q.correct_answer?"#34D399":"#6A8CAC",border:`1px solid ${j===q.correct_answer?"#34D39933":"#0E1A2C"}`}}>
-                        <strong>{["A","B","C","D"][j]}.</strong> {opt} {j===q.correct_answer&&"✓"}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{display:"flex",gap:10}}>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setStep(2)}>← Back</button>
-              <button className="btn btn-success" style={{flex:2}} onClick={handleUpload} disabled={uploading}>
-                {uploading?<><span className="spinner-sm"/>&nbsp;Uploading...</>:`💾 Save All ${parsed.length} Questions`}
-              </button>
-            </div>
-          </>
-        )}
-        {step===4&&(
-          <div style={{textAlign:"center",padding:"20px 0"}}>
-            <div style={{fontSize:64,marginBottom:16}}>🎉</div>
-            <div style={{fontWeight:800,fontSize:22,marginBottom:8,color:"#34D399"}}>Upload Complete!</div>
-            <div style={{color:"#6A8CAC",fontSize:14,marginBottom:28}}>{parsed.length} questions added!</div>
-            <button className="btn btn-primary" style={{padding:"12px 32px",fontSize:15}} onClick={onClose}>Done →</button>
+        {step===1&&(<>
+          <div style={{background:"#050810",border:"1px solid #0E1A2C",borderRadius:14,padding:20,marginBottom:20}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:10}}>📋 Required CSV columns:</div>
+            <div style={{fontFamily:"'Fira Code',monospace",fontSize:11,color:"#38BDF8",background:"#020408",borderRadius:8,padding:"10px 14px",lineHeight:1.8}}>question_text, option_a, option_b, option_c, option_d,<br/>correct_answer (A/B/C/D), topic, difficulty, explanation</div>
           </div>
-        )}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:20}}>
+            <div><label style={L}>EXAM</label><select className="select" value={exam} onChange={e=>{setExam(e.target.value);setSubject(SUBJECTS[e.target.value][0]);}}>{EXAMS.map(e=><option key={e}>{e}</option>)}</select></div>
+            <div><label style={L}>SUBJECT</label><select className="select" value={subject} onChange={e=>setSubject(e.target.value)}>{SUBJECTS[exam].map(s=><option key={s}>{s}</option>)}</select></div>
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn btn-ghost" style={{flex:1}} onClick={downloadSample}>📥 Sample CSV</button>
+            <button className="btn btn-primary" style={{flex:2}} onClick={()=>setStep(2)}>Next →</button>
+          </div>
+        </>)}
+        {step===2&&(<>
+          <div className={`drop-zone${dragOver?" drag-over":""}`} style={{marginBottom:16}} onDragOver={e=>{e.preventDefault();setDragOver(true);}} onDragLeave={()=>setDragOver(false)} onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}} onClick={()=>fileRef.current.click()}>
+            <div style={{fontSize:40,marginBottom:10}}>📂</div>
+            <div style={{fontWeight:700,fontSize:15,marginBottom:6}}>Drop CSV here or click to browse</div>
+            <input ref={fileRef} type="file" accept=".csv,.txt" style={{display:"none"}} onChange={e=>handleFile(e.target.files[0])}/>
+          </div>
+          <textarea className="input" rows={5} placeholder="Or paste CSV content here..." value={rawText} onChange={e=>setRawText(e.target.value)} style={{resize:"vertical",marginBottom:14,fontFamily:"'Fira Code',monospace",fontSize:12}}/>
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setStep(1)}>← Back</button>
+            <button className="btn btn-primary" style={{flex:2}} onClick={()=>parseCSV(rawText)}>Parse & Preview →</button>
+          </div>
+        </>)}
+        {step===3&&(<>
+          <div style={{background:"#34D39914",border:"1px solid #34D39933",borderRadius:10,padding:"12px 16px",marginBottom:14,color:"#34D399",fontSize:14,fontWeight:600}}>✅ {parsed.length} questions ready! Review then save.</div>
+          <div style={{maxHeight:260,overflowY:"auto",display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
+            {parsed.map((q,i)=>(
+              <div key={i} style={{background:"#050810",border:"1px solid #0E1A2C",borderRadius:10,padding:"10px 14px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontFamily:"'Fira Code',monospace",fontSize:11,color:"#6A8CAC"}}>Q{i+1}</span><div style={{display:"flex",gap:5}}><Tag color="#6A8CAC">{q.topic}</Tag><Tag color={q.difficulty==="Easy"?"#34D399":q.difficulty==="Hard"?"#F87171":"#E8B84B"}>{q.difficulty}</Tag></div></div>
+                <div style={{fontSize:13,fontWeight:600}}>{q.question_text?.slice(0,70)}...</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setStep(2)}>← Back</button>
+            <button className="btn btn-success" style={{flex:2}} onClick={handleUpload} disabled={uploading}>{uploading?<><span className="sm-spin"/>&nbsp;Uploading...</>:`💾 Save ${parsed.length} Questions`}</button>
+          </div>
+        </>)}
+        {step===4&&(<div style={{textAlign:"center",padding:"20px 0"}}><div style={{fontSize:56,marginBottom:12}}>🎉</div><div style={{fontWeight:800,fontSize:20,color:"#34D399",marginBottom:8}}>Done!</div><div style={{color:"#6A8CAC",fontSize:14,marginBottom:24}}>{parsed.length} questions saved!</div><button className="btn btn-primary" style={{padding:"12px 28px"}} onClick={onClose}>Close</button></div>)}
       </div>
     </div>
   );
@@ -316,28 +286,20 @@ function CreateTestModal({onClose,onSaved}){
   const[error,setError]=useState("");
   const[search,setSearch]=useState("");
   const upd=(k,v)=>setForm(f=>({...f,[k]:v}));
-
   useEffect(()=>{
-    const load=async()=>{
-      setFetching(true);
-      const{data}=await supabase.from("questions").select("id,question_text,subject,topic,difficulty").eq("exam",form.exam).eq("status","active").order("id",{ascending:false});
-      setQuestions(data||[]);setSelected([]);setFetching(false);
-    };
+    const load=async()=>{setFetching(true);const{data}=await supabase.from("questions").select("id,question_text,subject,topic,difficulty").eq("exam",form.exam).eq("status","active").order("id",{ascending:false});setQuestions(data||[]);setSelected([]);setFetching(false);};
     load();
   },[form.exam]);
-
   const filtered=questions.filter(q=>q.question_text?.toLowerCase().includes(search.toLowerCase())||q.topic?.toLowerCase().includes(search.toLowerCase()));
   const toggleQ=(id)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
-
   const handleCreate=async()=>{
     if(!form.name.trim()){setError("Please enter a test name");return;}
-    if(selected.length<1){setError("Please select at least 1 question");return;}
+    if(selected.length<1){setError("Select at least 1 question");return;}
     setLoading(true);setError("");
     const{error}=await supabase.from("tests").insert({...form,question_ids:selected,status:"published"});
     if(error){setError(error.message);setLoading(false);return;}
     onSaved("Test created and published!");onClose();
   };
-
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal" style={{maxWidth:700}}>
@@ -350,37 +312,31 @@ function CreateTestModal({onClose,onSaved}){
           <div style={{gridColumn:"1/-1"}}><label style={L}>TEST NAME *</label><input className="input" placeholder="e.g. SSC CGL Full Mock Test #2" value={form.name} onChange={e=>upd("name",e.target.value)}/></div>
           <div><label style={L}>EXAM</label><select className="select" value={form.exam} onChange={e=>upd("exam",e.target.value)}>{EXAMS.map(e=><option key={e}>{e}</option>)}</select></div>
           <div><label style={L}>TYPE</label><select className="select" value={form.type} onChange={e=>upd("type",e.target.value)}>{["Full Length","Sectional","Topic-wise","PYQ"].map(t=><option key={t}>{t}</option>)}</select></div>
-          <div><label style={L}>TIME LIMIT (minutes)</label><input className="input" type="number" min={5} max={180} value={form.time_limit} onChange={e=>upd("time_limit",+e.target.value)}/></div>
+          <div><label style={L}>TIME (minutes)</label><input className="input" type="number" min={5} max={180} value={form.time_limit} onChange={e=>upd("time_limit",+e.target.value)}/></div>
           <div style={{display:"flex",alignItems:"flex-end"}}><div style={{padding:"11px 14px",background:"#38BDF814",border:"1px solid #38BDF833",borderRadius:10,color:"#38BDF8",fontWeight:700,fontSize:14,width:"100%",textAlign:"center"}}>{selected.length} selected</div></div>
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <label style={{...L,marginBottom:0}}>SELECT QUESTIONS</label>
           <div style={{display:"flex",gap:8}}>
-            <button className="btn btn-ghost" style={{padding:"4px 12px",fontSize:11}} onClick={()=>setSelected(filtered.map(q=>q.id))}>Select All</button>
+            <button className="btn btn-ghost" style={{padding:"4px 12px",fontSize:11}} onClick={()=>setSelected(filtered.map(q=>q.id))}>All</button>
             <button className="btn btn-ghost" style={{padding:"4px 12px",fontSize:11}} onClick={()=>setSelected([])}>Clear</button>
           </div>
         </div>
-        <input className="input" placeholder="Search questions..." value={search} onChange={e=>setSearch(e.target.value)} style={{marginBottom:10}}/>
-        {fetching?<div style={{textAlign:"center",padding:20}}><div style={{width:24,height:24,border:"2px solid #152236",borderTopColor:"#38BDF8",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto"}}/></div>:(
-          <div style={{maxHeight:260,overflowY:"auto",display:"flex",flexDirection:"column",gap:5,marginBottom:16}}>
-            {filtered.length===0?<div style={{textAlign:"center",padding:24,color:"#6A8CAC",fontSize:13}}>No questions for {form.exam}. Add questions first!</div>:
+        <input className="input" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{marginBottom:8}}/>
+        {fetching?<Loading/>:(
+          <div style={{maxHeight:240,overflowY:"auto",display:"flex",flexDirection:"column",gap:5,marginBottom:14}}>
+            {filtered.length===0?<div style={{textAlign:"center",padding:20,color:"#6A8CAC",fontSize:13}}>No questions for {form.exam}</div>:
             filtered.map(q=>(
-              <div key={q.id} onClick={()=>toggleQ(q.id)} style={{padding:"10px 14px",borderRadius:10,border:`1.5px solid ${selected.includes(q.id)?"#38BDF8":"#0E1A2C"}`,background:selected.includes(q.id)?"#38BDF814":"#050810",cursor:"pointer",transition:"all 0.15s",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
-                <div style={{fontSize:13,fontWeight:selected.includes(q.id)?700:400,flex:1}}>{q.question_text?.slice(0,65)}...</div>
-                <div style={{display:"flex",gap:6,flexShrink:0}}>
-                  <Tag color="#6A8CAC">{q.topic}</Tag>
-                  <Tag color={q.difficulty==="Easy"?"#34D399":q.difficulty==="Hard"?"#F87171":"#E8B84B"}>{q.difficulty}</Tag>
-                  {selected.includes(q.id)&&<span style={{color:"#38BDF8",fontWeight:700}}>✓</span>}
-                </div>
+              <div key={q.id} onClick={()=>toggleQ(q.id)} style={{padding:"9px 14px",borderRadius:9,border:`1.5px solid ${selected.includes(q.id)?"#38BDF8":"#0E1A2C"}`,background:selected.includes(q.id)?"#38BDF814":"#050810",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+                <div style={{fontSize:13,fontWeight:selected.includes(q.id)?700:400,flex:1}}>{q.question_text?.slice(0,60)}...</div>
+                <div style={{display:"flex",gap:5,flexShrink:0}}><Tag color="#6A8CAC">{q.topic}</Tag>{selected.includes(q.id)&&<span style={{color:"#38BDF8",fontWeight:700}}>✓</span>}</div>
               </div>
             ))}
           </div>
         )}
-        <div style={{display:"flex",gap:10,paddingTop:16,borderTop:"1px solid #0E1A2C"}}>
+        <div style={{display:"flex",gap:10,paddingTop:14,borderTop:"1px solid #0E1A2C"}}>
           <button className="btn btn-ghost" style={{flex:1}} onClick={onClose}>Cancel</button>
-          <button className="btn btn-gold" style={{flex:2}} onClick={handleCreate} disabled={loading}>
-            {loading?<><span className="spinner-sm"/>&nbsp;Creating...</>:`🚀 Create & Publish (${selected.length} Qs)`}
-          </button>
+          <button className="btn btn-gold" style={{flex:2}} onClick={handleCreate} disabled={loading}>{loading?<><span className="sm-spin"/>&nbsp;Creating...</>:`🚀 Publish (${selected.length} Qs)`}</button>
         </div>
       </div>
     </div>
@@ -396,13 +352,11 @@ function AddUserModal({onClose,onSaved}){
   const exams=["SSC CGL","SSC CHSL","IBPS PO","IBPS Clerk","SBI PO","UPSC CSE","JEE Main","RRB NTPC"];
   const handleCreate=async()=>{
     if(!form.full_name||!form.email||!form.password){setError("Name, email and password required");return;}
-    if(form.password.length<6){setError("Password must be at least 6 characters");return;}
+    if(form.password.length<6){setError("Password min 6 chars");return;}
     setLoading(true);setError("");
     const{data,error}=await supabase.auth.signUp({email:form.email,password:form.password,options:{data:{full_name:form.full_name,mobile:form.mobile,exam_preparing:form.exam_preparing}}});
     if(error){setError(error.message);setLoading(false);return;}
-    if(data?.user){
-      await supabase.from("profiles").upsert({id:data.user.id,full_name:form.full_name,email:form.email,mobile:form.mobile,exam_preparing:form.exam_preparing});
-    }
+    if(data?.user){await supabase.from("profiles").upsert({id:data.user.id,full_name:form.full_name,email:form.email,mobile:form.mobile,exam_preparing:form.exam_preparing});}
     onSaved("User created!");onClose();
   };
   return(
@@ -416,73 +370,60 @@ function AddUserModal({onClose,onSaved}){
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
           <div style={{gridColumn:"1/-1"}}><label style={L}>FULL NAME *</label><input className="input" placeholder="Student name" value={form.full_name} onChange={e=>upd("full_name",e.target.value)}/></div>
           <div><label style={L}>EMAIL *</label><input className="input" type="email" placeholder="email@example.com" value={form.email} onChange={e=>upd("email",e.target.value)}/></div>
-          <div><label style={L}>PASSWORD *</label><input className="input" type="password" placeholder="Min 6 characters" value={form.password} onChange={e=>upd("password",e.target.value)}/></div>
-          <div><label style={L}>MOBILE</label><input className="input" type="tel" placeholder="10-digit number" value={form.mobile} onChange={e=>upd("mobile",e.target.value)} maxLength={10}/></div>
-          <div><label style={L}>TARGET EXAM</label><select className="select" value={form.exam_preparing} onChange={e=>upd("exam_preparing",e.target.value)}>{exams.map(e=><option key={e}>{e}</option>)}</select></div>
+          <div><label style={L}>PASSWORD *</label><input className="input" type="password" placeholder="Min 6 chars" value={form.password} onChange={e=>upd("password",e.target.value)}/></div>
+          <div><label style={L}>MOBILE</label><input className="input" type="tel" placeholder="10-digit" value={form.mobile} onChange={e=>upd("mobile",e.target.value)} maxLength={10}/></div>
+          <div><label style={L}>EXAM</label><select className="select" value={form.exam_preparing} onChange={e=>upd("exam_preparing",e.target.value)}>{exams.map(e=><option key={e}>{e}</option>)}</select></div>
         </div>
         <div style={{display:"flex",gap:10,marginTop:20,paddingTop:16,borderTop:"1px solid #0E1A2C"}}>
           <button className="btn btn-ghost" style={{flex:1}} onClick={onClose}>Cancel</button>
-          <button className="btn btn-success" style={{flex:2}} onClick={handleCreate} disabled={loading}>
-            {loading?<><span className="spinner-sm"/>&nbsp;Creating...</>:"✅ Create User"}
-          </button>
+          <button className="btn btn-success" style={{flex:2}} onClick={handleCreate} disabled={loading}>{loading?<><span className="sm-spin"/>&nbsp;Creating...</>:"✅ Create User"}</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ── AI QUESTION GENERATOR ─────────────────────────────────────────────────────
+// ── AI GENERATOR PAGE ─────────────────────────────────────────────────────────
 function AIGeneratorPage(){
   const[exam,setExam]=useState("SSC");
   const[subject,setSubject]=useState("Quantitative Aptitude");
   const[topic,setTopic]=useState("");
   const[difficulty,setDifficulty]=useState("Medium");
   const[count,setCount]=useState(5);
+  const[apiKey,setApiKey]=useState("");
   const[loading,setLoading]=useState(false);
+  const[saving,setSaving]=useState(false);
   const[questions,setQuestions]=useState([]);
   const[message,setMessage]=useState("");
   const[error,setError]=useState("");
-  const[saving,setSaving]=useState(false);
-  const[apiKey,setApiKey]=useState("");
 
   const generate=async()=>{
     if(!topic){setError("Please enter a topic");return;}
-    if(!apiKey){setError("Please enter your Gemini API key");return;}
+    if(!apiKey){setError("Please enter your Groq API key");return;}
     setLoading(true);setError("");setMessage("");setQuestions([]);
-    const prompt=`Generate exactly ${count} multiple choice questions for ${exam} exam.
-Subject: ${subject}, Topic: ${topic}, Difficulty: ${difficulty}
-Return ONLY a valid JSON array, no extra text:
-[{"question":"text","options":["A","B","C","D"],"correct_answer":0,"explanation":"why correct"}]
-correct_answer is index 0-3.`;
+    const prompt=`Generate exactly ${count} multiple choice questions for ${exam} exam.\nSubject: ${subject}, Topic: ${topic}, Difficulty: ${difficulty}\nReturn ONLY a valid JSON array, no extra text:\n[{"question":"text","options":["A","B","C","D"],"correct_answer":0,"explanation":"why"}]\ncorrect_answer is 0-3 index.`;
     try{
       const res=await fetch("https://api.groq.com/openai/v1/chat/completions",{
-  method:"POST",
-  headers:{"Content-Type":"application/json","Authorization":"Bearer "+apiKey},
-  body:JSON.stringify({
-    model:"llama-3.3-70b-versatile",
-    messages:[{role:"user",content:prompt}],
-    temperature:0.7
-  })
-});
-const data=await res.json();
-if(!data.choices){setError("API Error: "+(data.error?.message||"Check your Groq API key"));setLoading(false);return;}
-const text=data.choices[0].message.content;
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+apiKey},
+        body:JSON.stringify({model:"llama-3.3-70b-versatile",messages:[{role:"user",content:prompt}],temperature:0.7})
+      });
+      const data=await res.json();
+      if(!data.choices){setError("Groq API Error: "+(data.error?.message||"Check your API key"));setLoading(false);return;}
+      const text=data.choices[0].message.content;
+      const clean=text.replace(/```json|```/g,"").trim();
       const parsed=JSON.parse(clean);
       setQuestions(parsed.map(q=>({...q,exam,subject,topic,difficulty})));
-      setMessage(`✅ ${parsed.length} questions generated!`);
+      setMessage(`✅ ${parsed.length} questions generated! Review and save.`);
     }catch(err){
-      setError("Error: "+err.message+". Try a different model or check API key.");
+      setError("Error: "+err.message);
     }
     setLoading(false);
   };
 
   const saveAll=async()=>{
     setSaving(true);
-    const{error}=await supabase.from("questions").insert(questions.map(q=>({
-      exam:q.exam,subject:q.subject,topic:q.topic,difficulty:q.difficulty,
-      question_text:q.question,options:q.options,correct_answer:q.correct_answer,
-      explanation:q.explanation,status:"active"
-    })));
+    const{error}=await supabase.from("questions").insert(questions.map(q=>({exam:q.exam,subject:q.subject,topic:q.topic,difficulty:q.difficulty,question_text:q.question,options:q.options,correct_answer:q.correct_answer,explanation:q.explanation,status:"active"})));
     if(error)setError("Save error: "+error.message);
     else{setMessage(`🎉 ${questions.length} questions saved!`);setQuestions([]);}
     setSaving(false);
@@ -491,55 +432,47 @@ const text=data.choices[0].message.content;
   return(
     <div style={{padding:28,maxWidth:900}}>
       <h2 style={{fontWeight:800,fontSize:24,marginBottom:6}}>🤖 AI Question Generator</h2>
-      <p style={{color:"#6A8CAC",fontSize:13,marginBottom:24}}>Generate exam questions automatically using Google Gemini AI</p>
-
+      <p style={{color:"#6A8CAC",fontSize:13,marginBottom:24}}>Generate questions using Groq AI — fast and free!</p>
       <div className="card" style={{marginBottom:20}}>
         <div style={{marginBottom:16}}>
-          <label style={L}>YOUR GEMINI API KEY</label>
-          <input className="input" type="password" placeholder="Paste your Gemini API key here (AIza...)" value={apiKey} onChange={e=>setApiKey(e.target.value)}/>
-          <div style={{fontSize:11,color:"#6A8CAC",marginTop:6}}>Get free key at: aistudio.google.com → Get API Key</div>
+          <label style={L}>GROQ API KEY</label>
+          <input className="input" type="password" placeholder="Paste your Groq API key (gsk_...)" value={apiKey} onChange={e=>setApiKey(e.target.value)}/>
+          <div style={{fontSize:11,color:"#6A8CAC",marginTop:6}}>Get free key at: console.groq.com → API Keys</div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
           <div><label style={L}>EXAM</label><select className="select" value={exam} onChange={e=>{setExam(e.target.value);setSubject(SUBJECTS[e.target.value][0]);}}>{EXAMS.map(e=><option key={e}>{e}</option>)}</select></div>
           <div><label style={L}>SUBJECT</label><select className="select" value={subject} onChange={e=>setSubject(e.target.value)}>{SUBJECTS[exam].map(s=><option key={s}>{s}</option>)}</select></div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:4}}>
-          <div><label style={L}>TOPIC *</label><input className="input" placeholder="e.g. Algebra, Syllogism..." value={topic} onChange={e=>setTopic(e.target.value)}/></div>
+          <div><label style={L}>TOPIC *</label><input className="input" placeholder="e.g. Algebra..." value={topic} onChange={e=>setTopic(e.target.value)}/></div>
           <div><label style={L}>DIFFICULTY</label><select className="select" value={difficulty} onChange={e=>setDifficulty(e.target.value)}><option>Easy</option><option>Medium</option><option>Hard</option></select></div>
-          <div><label style={L}>NO. OF QUESTIONS</label><select className="select" value={count} onChange={e=>setCount(+e.target.value)}><option>5</option><option>10</option><option>15</option><option>20</option></select></div>
+          <div><label style={L}>COUNT</label><select className="select" value={count} onChange={e=>setCount(+e.target.value)}><option>5</option><option>10</option><option>15</option><option>20</option></select></div>
         </div>
         <button style={{width:"100%",padding:14,marginTop:16,background:"linear-gradient(135deg,#E8B84B,#C89030)",border:"none",borderRadius:12,color:"#020408",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:15,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}} onClick={generate} disabled={loading}>
-          {loading?<><span className="spinner-sm" style={{borderTopColor:"#020408"}}/>&nbsp;Generating...&nbsp;</>:"✨ Generate Questions with AI"}
+          {loading?<><span className="sm-spin" style={{borderTopColor:"#020408"}}/>&nbsp;Generating...</>:"✨ Generate with AI"}
         </button>
       </div>
-
       {error&&<div style={{background:"#F8717122",border:"1px solid #F8717144",borderRadius:10,padding:"12px 16px",color:"#F87171",fontSize:13,marginBottom:16}}>{error}</div>}
       {message&&<div style={{background:"#34D39922",border:"1px solid #34D39944",borderRadius:10,padding:"12px 16px",color:"#34D399",fontSize:13,marginBottom:16}}>{message}</div>}
-
       {questions.length>0&&(
         <div className="card">
-          <div style={{fontWeight:700,fontSize:15,marginBottom:16}}>{questions.length} Questions Generated — Review & Save</div>
-          <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:20}}>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:16}}>{questions.length} Questions — Review Before Saving</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:16}}>
             {questions.map((q,i)=>(
-              <div key={i} style={{background:"#050810",border:"1px solid #0E1A2C",borderRadius:12,padding:"16px 18px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                  <span style={{fontFamily:"'Fira Code',monospace",fontSize:11,color:"#6A8CAC"}}>Q{i+1}</span>
-                  <div style={{display:"flex",gap:6}}><Tag color="#6A8CAC">{q.topic}</Tag><Tag color={q.difficulty==="Easy"?"#34D399":q.difficulty==="Hard"?"#F87171":"#E8B84B"}>{q.difficulty}</Tag></div>
-                </div>
-                <div style={{fontSize:14,fontWeight:600,marginBottom:10}}>{q.question}</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:10}}>
+              <div key={i} style={{background:"#050810",border:"1px solid #0E1A2C",borderRadius:12,padding:"14px 16px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontFamily:"'Fira Code',monospace",fontSize:11,color:"#6A8CAC"}}>Q{i+1}</span><div style={{display:"flex",gap:5}}><Tag color="#6A8CAC">{q.topic}</Tag><Tag color={q.difficulty==="Easy"?"#34D399":q.difficulty==="Hard"?"#F87171":"#E8B84B"}>{q.difficulty}</Tag></div></div>
+                <div style={{fontSize:14,fontWeight:600,marginBottom:8}}>{q.question}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:8}}>
                   {q.options.map((opt,j)=>(
-                    <div key={j} style={{fontSize:12,padding:"6px 10px",borderRadius:8,background:j===q.correct_answer?"#34D39918":"#020408",color:j===q.correct_answer?"#34D399":"#6A8CAC",border:`1px solid ${j===q.correct_answer?"#34D39933":"#0E1A2C"}`}}>
-                      <strong>{["A","B","C","D"][j]}.</strong> {opt} {j===q.correct_answer&&"✓"}
-                    </div>
+                    <div key={j} style={{fontSize:12,padding:"6px 10px",borderRadius:7,background:j===q.correct_answer?"#34D39918":"#020408",color:j===q.correct_answer?"#34D399":"#6A8CAC",border:`1px solid ${j===q.correct_answer?"#34D39933":"#0E1A2C"}`}}><strong>{["A","B","C","D"][j]}.</strong> {opt} {j===q.correct_answer&&"✓"}</div>
                   ))}
                 </div>
-                <div style={{fontSize:12,color:"#7090B0",padding:"8px 12px",background:"#090E18",borderRadius:8,borderLeft:"3px solid #E8B84B"}}>💡 {q.explanation}</div>
+                <div style={{fontSize:12,color:"#7090B0",padding:"8px 12px",background:"#090E18",borderRadius:7,borderLeft:"3px solid #E8B84B"}}>💡 {q.explanation}</div>
               </div>
             ))}
           </div>
           <button style={{width:"100%",padding:14,background:"linear-gradient(135deg,#34D399,#059669)",border:"none",borderRadius:12,color:"#020408",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:15,fontWeight:800,cursor:"pointer"}} onClick={saveAll} disabled={saving}>
-            {saving?<><span className="spinner-sm" style={{borderTopColor:"#020408"}}/>&nbsp;Saving...</>:`💾 Save All ${questions.length} Questions to Database`}
+            {saving?<><span className="sm-spin" style={{borderTopColor:"#020408"}}/>&nbsp;Saving...</>:`💾 Save All ${questions.length} Questions`}
           </button>
         </div>
       )}
@@ -558,32 +491,15 @@ function QuestionsPage(){
   const[editQ,setEditQ]=useState(null);
   const[toast,setToast]=useState(null);
   const[selected,setSelected]=useState([]);
-
   const fetchQ=async()=>{setLoading(true);const{data}=await supabase.from("questions").select("*").order("id",{ascending:false});setQuestions(data||[]);setLoading(false);};
   useEffect(()=>{fetchQ();},[]);
-
-  const deleteQ=async(id)=>{
-    if(!window.confirm("Delete this question?"))return;
-    const{error}=await supabase.from("questions").delete().eq("id",id);
-    if(error){setToast({msg:"Error: "+error.message,type:"error"});return;}
-    setToast({msg:"Deleted!",type:"success"});fetchQ();
-  };
-  const deleteBulk=async()=>{
-    if(!window.confirm(`Delete ${selected.length} questions?`))return;
-    await supabase.from("questions").delete().in("id",selected);
-    setSelected([]);setToast({msg:`${selected.length} deleted`,type:"success"});fetchQ();
-  };
-  const toggleStatus=async(q)=>{
-    const s=q.status==="active"?"inactive":"active";
-    await supabase.from("questions").update({status:s}).eq("id",q.id);
-    setToast({msg:`Question ${s}`,type:"success"});fetchQ();
-  };
+  const deleteQ=async(id)=>{if(!window.confirm("Delete?"))return;const{error}=await supabase.from("questions").delete().eq("id",id);if(error){setToast({msg:"Error: "+error.message,type:"error"});return;}setToast({msg:"Deleted!",type:"success"});fetchQ();};
+  const deleteBulk=async()=>{if(!window.confirm(`Delete ${selected.length}?`))return;await supabase.from("questions").delete().in("id",selected);setSelected([]);setToast({msg:`${selected.length} deleted`,type:"success"});fetchQ();};
+  const toggleStatus=async(q)=>{const s=q.status==="active"?"inactive":"active";await supabase.from("questions").update({status:s}).eq("id",q.id);setToast({msg:`${s}`,type:"success"});fetchQ();};
   const toggleSel=(id)=>setSelected(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
-
   const filtered=questions.filter(q=>filterExam==="All"||q.exam===filterExam).filter(q=>q.question_text?.toLowerCase().includes(search.toLowerCase())||q.topic?.toLowerCase().includes(search.toLowerCase()));
   const ec={SSC:"#E8B84B",UPSC:"#38BDF8",JEE:"#A78BFA",Banking:"#34D399",RRB:"#FB923C"};
   const dc={Easy:"#34D399",Medium:"#E8B84B",Hard:"#F87171"};
-
   return(
     <div style={{padding:28,maxWidth:1200}}>
       {toast&&<Toast message={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>}
@@ -597,34 +513,17 @@ function QuestionsPage(){
           <button className="btn btn-primary" onClick={()=>{setEditQ(null);setModal(true);}}>+ Add Question</button>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:22}}>
-        {EXAMS.map(e=>(
-          <div key={e} className="card" style={{cursor:"pointer",borderColor:filterExam===e?ec[e]+"55":undefined}} onClick={()=>setFilter(filterExam===e?"All":e)}>
-            <div style={{fontFamily:"'Fira Code',monospace",fontSize:24,fontWeight:700,color:ec[e]}}>{questions.filter(q=>q.exam===e).length}</div>
-            <div style={{fontSize:12,color:"#6A8CAC",marginTop:4}}>{e}</div>
-          </div>
-        ))}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:20}}>
+        {EXAMS.map(e=>(<div key={e} className="card" style={{cursor:"pointer",borderColor:filterExam===e?ec[e]+"55":undefined}} onClick={()=>setFilter(filterExam===e?"All":e)}><div style={{fontFamily:"'Fira Code',monospace",fontSize:22,fontWeight:700,color:ec[e]}}>{questions.filter(q=>q.exam===e).length}</div><div style={{fontSize:12,color:"#6A8CAC",marginTop:4}}>{e}</div></div>))}
       </div>
-      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,background:"#080C18",border:"1px solid #152236",borderRadius:10,padding:"8px 14px",flex:1,maxWidth:300}}>
-          <span>🔍</span>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." style={{background:"transparent",border:"none",outline:"none",color:"#EEF2FF",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:13,width:"100%"}}/>
+          <span>🔍</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." style={{background:"transparent",border:"none",outline:"none",color:"#EEF2FF",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:13,width:"100%"}}/>
         </div>
-        {["All",...EXAMS].map(e=>(
-          <button key={e} onClick={()=>setFilter(e)} style={{padding:"7px 16px",borderRadius:999,border:`1px solid ${filterExam===e?"#38BDF8":"#152236"}`,background:filterExam===e?"#38BDF814":"transparent",color:filterExam===e?"#38BDF8":"#6A8CAC",fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:600,fontSize:12,cursor:"pointer"}}>{e}</button>
-        ))}
+        {["All",...EXAMS].map(e=>(<button key={e} onClick={()=>setFilter(e)} style={{padding:"7px 16px",borderRadius:999,border:`1px solid ${filterExam===e?"#38BDF8":"#152236"}`,background:filterExam===e?"#38BDF814":"transparent",color:filterExam===e?"#38BDF8":"#6A8CAC",fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:600,fontSize:12,cursor:"pointer"}}>{e}</button>))}
         <Tag color="#6A8CAC">{filtered.length}</Tag>
       </div>
-      {loading?<Spinner/>:filtered.length===0?(
-        <div style={{textAlign:"center",padding:80,color:"#6A8CAC"}}>
-          <div style={{fontSize:48,marginBottom:16}}>❓</div>
-          <div style={{fontWeight:700,fontSize:16,color:"#EEF2FF",marginBottom:16}}>No questions yet</div>
-          <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-            <button className="btn btn-ghost" onClick={()=>setBulkModal(true)}>📤 Bulk Upload</button>
-            <button className="btn btn-primary" onClick={()=>setModal(true)}>+ Add Question</button>
-          </div>
-        </div>
-      ):(
+      {loading?<Loading/>:filtered.length===0?(<div style={{textAlign:"center",padding:80,color:"#6A8CAC"}}><div style={{fontSize:48,marginBottom:16}}>❓</div><div style={{fontWeight:700,fontSize:16,color:"#EEF2FF",marginBottom:16}}>No questions yet</div><div style={{display:"flex",gap:10,justifyContent:"center"}}><button className="btn btn-ghost" onClick={()=>setBulkModal(true)}>📤 Bulk Upload</button><button className="btn btn-primary" onClick={()=>setModal(true)}>+ Add Question</button></div></div>):(
         <div style={{display:"flex",flexDirection:"column",gap:5}}>
           <div style={{display:"grid",gridTemplateColumns:"30px 40px 1fr 70px 100px 80px 70px 70px 120px",gap:12,padding:"8px 16px",fontSize:10,color:"#253A52",fontWeight:700,letterSpacing:1.2}}>
             <span></span><span>#</span><span>QUESTION</span><span>EXAM</span><span>SUBJECT</span><span>TOPIC</span><span>DIFF</span><span>STATUS</span><span>ACTIONS</span>
@@ -633,10 +532,7 @@ function QuestionsPage(){
             <div key={q.id} className="tbl-row" style={{gridTemplateColumns:"30px 40px 1fr 70px 100px 80px 70px 70px 120px"}}>
               <input type="checkbox" checked={selected.includes(q.id)} onChange={()=>toggleSel(q.id)} style={{cursor:"pointer",accentColor:"#38BDF8"}}/>
               <Mono size={12} color="#253A52">{String(i+1).padStart(2,"0")}</Mono>
-              <div>
-                <div style={{fontWeight:600,fontSize:13}}>{q.question_text?.slice(0,70)}...</div>
-                <div style={{fontSize:11,color:"#6A8CAC",marginTop:2}}>{q.subject}</div>
-              </div>
+              <div><div style={{fontWeight:600,fontSize:13}}>{q.question_text?.slice(0,70)}...</div><div style={{fontSize:11,color:"#6A8CAC",marginTop:2}}>{q.subject}</div></div>
               <Tag color={ec[q.exam]||"#38BDF8"}>{q.exam}</Tag>
               <div style={{fontSize:12,color:"#6A8CAC"}}>{q.subject?.split(" ").slice(0,2).join(" ")}</div>
               <Tag color="#6A8CAC">{q.topic}</Tag>
@@ -644,9 +540,7 @@ function QuestionsPage(){
               <Tag color={q.status==="active"?"#34D399":q.status==="draft"?"#FCD34D":"#6A8CAC"}>{q.status}</Tag>
               <div style={{display:"flex",gap:5}}>
                 <button className="btn btn-ghost" style={{padding:"5px 10px",fontSize:11}} onClick={()=>{setEditQ(q);setModal(true);}}>✏️</button>
-                <button className="btn" style={{padding:"5px 10px",fontSize:11,background:q.status==="active"?"#FB923C22":"#34D39922",color:q.status==="active"?"#FB923C":"#34D399",border:`1px solid ${q.status==="active"?"#FB923C33":"#34D39933"}`}} onClick={()=>toggleStatus(q)}>
-                  {q.status==="active"?"⏸":"▶"}
-                </button>
+                <button className="btn" style={{padding:"5px 10px",fontSize:11,background:q.status==="active"?"#FB923C22":"#34D39922",color:q.status==="active"?"#FB923C":"#34D399",border:`1px solid ${q.status==="active"?"#FB923C33":"#34D39933"}`}} onClick={()=>toggleStatus(q)}>{q.status==="active"?"⏸":"▶"}</button>
                 <button className="btn btn-danger" style={{padding:"5px 10px",fontSize:11}} onClick={()=>deleteQ(q.id)}>🗑</button>
               </div>
             </div>
@@ -663,45 +557,32 @@ function TestsPage(){
   const[loading,setLoading]=useState(true);
   const[modal,setModal]=useState(false);
   const[toast,setToast]=useState(null);
-
   const fetchT=async()=>{setLoading(true);const{data}=await supabase.from("tests").select("*").order("id",{ascending:false});setTests(data||[]);setLoading(false);};
   useEffect(()=>{fetchT();},[]);
-
   const deleteTest=async(id)=>{
-    if(!window.confirm("Delete this test? Students will no longer see it."))return;
+    if(!window.confirm("Delete this test?"))return;
     const{error}=await supabase.from("tests").delete().eq("id",id);
     if(error){setToast({msg:"Error: "+error.message,type:"error"});return;}
     setToast({msg:"Test deleted!",type:"success"});fetchT();
   };
-  const toggleTest=async(t)=>{
-    const s=t.status==="published"?"inactive":"published";
-    await supabase.from("tests").update({status:s}).eq("id",t.id);
-    setToast({msg:`Test ${s}`,type:"success"});fetchT();
-  };
-
+  const toggleTest=async(t)=>{const s=t.status==="published"?"inactive":"published";await supabase.from("tests").update({status:s}).eq("id",t.id);setToast({msg:`Test ${s}`,type:"success"});fetchT();};
   return(
     <div style={{padding:28,maxWidth:1100}}>
       {toast&&<Toast message={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>}
       {modal&&<CreateTestModal onClose={()=>setModal(false)} onSaved={(msg)=>{setToast({msg,type:"success"});fetchT();}}/>}
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:24}}>
-        <div><h2 style={{fontWeight:800,fontSize:24}}>Mock Tests</h2><p style={{color:"#6A8CAC",fontSize:13,marginTop:3}}>{tests.filter(t=>t.status==="published").length} published · {tests.filter(t=>t.status!=="published").length} inactive</p></div>
+        <div><h2 style={{fontWeight:800,fontSize:24}}>Mock Tests</h2><p style={{color:"#6A8CAC",fontSize:13,marginTop:3}}>{tests.filter(t=>t.status==="published").length} published</p></div>
         <button className="btn btn-gold" onClick={()=>setModal(true)}>+ Create Test</button>
       </div>
-      {loading?<Spinner/>:tests.length===0?(
-        <div style={{textAlign:"center",padding:80,color:"#6A8CAC"}}>
-          <div style={{fontSize:48,marginBottom:16}}>📋</div>
-          <div style={{fontWeight:700,fontSize:16,color:"#EEF2FF",marginBottom:8}}>No tests yet</div>
-          <button className="btn btn-gold" style={{marginTop:8}} onClick={()=>setModal(true)}>+ Create First Test</button>
-        </div>
-      ):(
+      {loading?<Loading/>:tests.length===0?(<div style={{textAlign:"center",padding:80,color:"#6A8CAC"}}><div style={{fontSize:48,marginBottom:16}}>📋</div><div style={{fontWeight:700,fontSize:16,color:"#EEF2FF",marginBottom:8}}>No tests yet</div><button className="btn btn-gold" style={{marginTop:8}} onClick={()=>setModal(true)}>+ Create First Test</button></div>):(
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 80px 90px 60px 80px 80px 140px",gap:12,padding:"8px 16px",fontSize:10,color:"#253A52",fontWeight:700,letterSpacing:1.2}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 80px 90px 60px 80px 80px 150px",gap:12,padding:"8px 16px",fontSize:10,color:"#253A52",fontWeight:700,letterSpacing:1.2}}>
             <span>TEST NAME</span><span>EXAM</span><span>TYPE</span><span>QS</span><span>TIME</span><span>STATUS</span><span>ACTIONS</span>
           </div>
           {tests.map(t=>{
             const qCount=Array.isArray(t.question_ids)?t.question_ids.length:(JSON.parse(t.question_ids||"[]")).length;
             return(
-              <div key={t.id} className="tbl-row" style={{gridTemplateColumns:"1fr 80px 90px 60px 80px 80px 140px"}}>
+              <div key={t.id} className="tbl-row" style={{gridTemplateColumns:"1fr 80px 90px 60px 80px 80px 150px"}}>
                 <div><div style={{fontWeight:700,fontSize:14}}>{t.name}</div><div style={{fontSize:11,color:"#6A8CAC"}}>{new Date(t.created_at).toLocaleDateString("en-IN")}</div></div>
                 <Tag color="#E8B84B">{t.exam}</Tag>
                 <Tag color="#38BDF8">{t.type}</Tag>
@@ -709,9 +590,7 @@ function TestsPage(){
                 <Mono size={12} color="#6A8CAC">{t.time_limit}m</Mono>
                 <Tag color={t.status==="published"?"#34D399":"#6A8CAC"}>{t.status}</Tag>
                 <div style={{display:"flex",gap:5}}>
-                  <button className="btn" style={{padding:"5px 10px",fontSize:11,background:t.status==="published"?"#FB923C22":"#34D39922",color:t.status==="published"?"#FB923C":"#34D399",border:`1px solid ${t.status==="published"?"#FB923C33":"#34D39933"}`}} onClick={()=>toggleTest(t)}>
-                    {t.status==="published"?"⏸":"▶"}
-                  </button>
+                  <button className="btn" style={{padding:"5px 10px",fontSize:11,background:t.status==="published"?"#FB923C22":"#34D39922",color:t.status==="published"?"#FB923C":"#34D399",border:`1px solid ${t.status==="published"?"#FB923C33":"#34D39933"}`}} onClick={()=>toggleTest(t)}>{t.status==="published"?"⏸ Hide":"▶ Show"}</button>
                   <button className="btn btn-danger" style={{padding:"5px 10px",fontSize:11}} onClick={()=>deleteTest(t.id)}>🗑 Delete</button>
                 </div>
               </div>
@@ -730,20 +609,16 @@ function UsersPage(){
   const[search,setSearch]=useState("");
   const[addModal,setAddModal]=useState(false);
   const[toast,setToast]=useState(null);
-
   const fetchU=async()=>{setLoading(true);const{data}=await supabase.from("profiles").select("*").order("created_at",{ascending:false});setUsers(data||[]);setLoading(false);};
   useEffect(()=>{fetchU();},[]);
-
   const deleteUser=async(id,name)=>{
-    if(!window.confirm(`Remove ${name}? This deletes their profile and test history.`))return;
+    if(!window.confirm(`Remove ${name}?`))return;
     await supabase.from("test_attempts").delete().eq("user_id",id);
     await supabase.from("profiles").delete().eq("id",id);
     setToast({msg:`${name} removed`,type:"success"});fetchU();
   };
-
   const filtered=users.filter(u=>u.full_name?.toLowerCase().includes(search.toLowerCase())||u.email?.toLowerCase().includes(search.toLowerCase())||u.mobile?.includes(search)||u.exam_preparing?.toLowerCase().includes(search.toLowerCase()));
   const ec={SSC:"#E8B84B",Banking:"#34D399",UPSC:"#38BDF8",JEE:"#A78BFA"};
-
   return(
     <div style={{padding:28,maxWidth:1100}}>
       {toast&&<Toast message={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>}
@@ -752,21 +627,15 @@ function UsersPage(){
         <div><h2 style={{fontWeight:800,fontSize:24}}>User Management</h2><p style={{color:"#6A8CAC",fontSize:13,marginTop:3}}>{users.length} registered students</p></div>
         <button className="btn btn-primary" onClick={()=>setAddModal(true)}>+ Add User</button>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:22}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
         {[["👥","Total",users.length,"#38BDF8"],["📚","SSC",users.filter(u=>u.exam_preparing?.includes("SSC")).length,"#E8B84B"],["🏦","Banking",users.filter(u=>u.exam_preparing?.includes("Banking")||u.exam_preparing?.includes("IBPS")||u.exam_preparing?.includes("SBI")).length,"#34D399"],["🎓","UPSC/JEE",users.filter(u=>u.exam_preparing?.includes("UPSC")||u.exam_preparing?.includes("JEE")).length,"#A78BFA"]].map(([icon,l,v,c])=>(
-          <div key={l} className="card"><div style={{fontSize:24,marginBottom:8}}>{icon}</div><div style={{fontFamily:"'Fira Code',monospace",fontSize:28,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:12,color:"#6A8CAC",marginTop:5}}>{l}</div></div>
+          <div key={l} className="card"><div style={{fontSize:22,marginBottom:8}}>{icon}</div><div style={{fontFamily:"'Fira Code',monospace",fontSize:26,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:12,color:"#6A8CAC",marginTop:5}}>{l}</div></div>
         ))}
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:8,background:"#080C18",border:"1px solid #152236",borderRadius:10,padding:"8px 14px",maxWidth:380,marginBottom:16}}>
-        <span>🔍</span>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, email, mobile, exam..." style={{background:"transparent",border:"none",outline:"none",color:"#EEF2FF",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:13,width:"100%"}}/>
+      <div style={{display:"flex",alignItems:"center",gap:8,background:"#080C18",border:"1px solid #152236",borderRadius:10,padding:"8px 14px",maxWidth:360,marginBottom:14}}>
+        <span>🔍</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, email, mobile..." style={{background:"transparent",border:"none",outline:"none",color:"#EEF2FF",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:13,width:"100%"}}/>
       </div>
-      {loading?<Spinner/>:filtered.length===0?(
-        <div style={{textAlign:"center",padding:80,color:"#6A8CAC"}}>
-          <div style={{fontSize:48,marginBottom:16}}>👥</div>
-          <div style={{fontWeight:700,fontSize:16,color:"#EEF2FF"}}>No users yet</div>
-        </div>
-      ):(
+      {loading?<Loading/>:filtered.length===0?(<div style={{textAlign:"center",padding:80,color:"#6A8CAC"}}><div style={{fontSize:48,marginBottom:16}}>👥</div><div style={{fontWeight:700,fontSize:16,color:"#EEF2FF"}}>No users yet</div></div>):(
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 150px 110px 120px 110px 80px",gap:12,padding:"8px 16px",fontSize:10,color:"#253A52",fontWeight:700,letterSpacing:1.2}}>
             <span>USER</span><span>EMAIL</span><span>MOBILE</span><span>EXAM</span><span>JOINED</span><span>ACTION</span>
@@ -794,17 +663,12 @@ function UsersPage(){
 function AttemptsPage(){
   const[attempts,setAttempts]=useState([]);
   const[loading,setLoading]=useState(true);
-  useEffect(()=>{
-    supabase.from("test_attempts").select("*,profiles(full_name),tests(name,exam)").order("completed_at",{ascending:false})
-      .then(({data})=>{setAttempts(data||[]);setLoading(false);});
-  },[]);
+  useEffect(()=>{supabase.from("test_attempts").select("*,profiles(full_name),tests(name,exam)").order("completed_at",{ascending:false}).then(({data})=>{setAttempts(data||[]);setLoading(false);});},[]);
   return(
     <div style={{padding:28,maxWidth:1100}}>
       <h2 style={{fontWeight:800,fontSize:24,marginBottom:6}}>Test Attempts</h2>
-      <p style={{color:"#6A8CAC",fontSize:13,marginBottom:24}}>{attempts.length} total attempts</p>
-      {loading?<Spinner/>:attempts.length===0?(
-        <div style={{textAlign:"center",padding:80,color:"#6A8CAC"}}><div style={{fontSize:48,marginBottom:16}}>📊</div><div style={{fontWeight:700,fontSize:16,color:"#EEF2FF"}}>No attempts yet</div></div>
-      ):(
+      <p style={{color:"#6A8CAC",fontSize:13,marginBottom:24}}>{attempts.length} total</p>
+      {loading?<Loading/>:attempts.length===0?(<div style={{textAlign:"center",padding:80,color:"#6A8CAC"}}><div style={{fontSize:48,marginBottom:16}}>📊</div><div style={{fontWeight:700,fontSize:16,color:"#EEF2FF"}}>No attempts yet</div></div>):(
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 80px 80px 80px 120px",gap:12,padding:"8px 16px",fontSize:10,color:"#253A52",fontWeight:700,letterSpacing:1.2}}>
             <span>STUDENT</span><span>TEST</span><span>SCORE</span><span>ACCURACY</span><span>TIME</span><span>DATE</span>
@@ -825,8 +689,8 @@ function AttemptsPage(){
   );
 }
 
-// ── DASHBOARD PAGE ────────────────────────────────────────────────────────────
-function DashboardPage({setPage}){
+// ── DASHBOARD HOME ────────────────────────────────────────────────────────────
+function DashboardHome({setPage}){
   const[stats,setStats]=useState({questions:0,users:0,tests:0,attempts:0});
   useEffect(()=>{
     Promise.all([
@@ -839,7 +703,7 @@ function DashboardPage({setPage}){
   return(
     <div style={{padding:28,maxWidth:1100}}>
       <h2 style={{fontWeight:800,fontSize:24,marginBottom:6}}>Admin Dashboard</h2>
-      <p style={{color:"#6A8CAC",fontSize:13,marginBottom:28}}>Live platform overview — mockies.in</p>
+      <p style={{color:"#6A8CAC",fontSize:13,marginBottom:28}}>mockies.in — Live platform overview</p>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:32}}>
         {[["❓","Questions",stats.questions,"#E8B84B"],["👥","Users",stats.users,"#38BDF8"],["📋","Tests",stats.tests,"#A78BFA"],["📝","Attempts",stats.attempts,"#34D399"]].map(([icon,label,val,color])=>(
           <div key={label} className="card fade-up">
@@ -851,10 +715,10 @@ function DashboardPage({setPage}){
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
         {[
-          {icon:"❓",title:"Question Bank",sub:"Add, edit, bulk upload questions via CSV",btn:"Manage →",color:"#E8B84B",page:"questions"},
-          {icon:"📋",title:"Create Tests",sub:"Build and publish mock tests for students",btn:"Manage →",color:"#38BDF8",page:"tests"},
-          {icon:"👥",title:"Users",sub:"View, add, delete registered students",btn:"Manage →",color:"#34D399",page:"users"},
-          {icon:"🤖",title:"AI Generator",sub:"Auto-generate questions with Gemini AI",btn:"Open →",color:"#A78BFA",page:"ai"},
+          {icon:"❓",title:"Question Bank",sub:"Add, edit, bulk upload via CSV",btn:"Manage →",color:"#E8B84B",page:"questions"},
+          {icon:"📋",title:"Tests",sub:"Create and publish mock tests",btn:"Manage →",color:"#38BDF8",page:"tests"},
+          {icon:"👥",title:"Users",sub:"View, add, delete students",btn:"Manage →",color:"#34D399",page:"users"},
+          {icon:"🤖",title:"AI Generator",sub:"Auto-generate questions with Groq AI",btn:"Open →",color:"#A78BFA",page:"ai"},
         ].map((item,i)=>(
           <div key={i} className="card" style={{cursor:"pointer"}} onClick={()=>setPage(item.page)}>
             <div style={{fontSize:32,marginBottom:10}}>{item.icon}</div>
@@ -868,63 +732,39 @@ function DashboardPage({setPage}){
   );
 }
 
-// ── ROOT ──────────────────────────────────────────────────────────────────────
-const ADMIN_EMAILS = ["Himanshu.mzn2019@gmail.com"]; // 👈 Add YOUR email here
+// ── ROOT APP ──────────────────────────────────────────────────────────────────
+export default function AdminPanel() {
+  const [page, setPage]       = useState("dashboard");
+  const [unlocked, setUnlocked] = useState(false);
+  const [checking, setChecking] = useState(true);
 
-export default function AdminPanel(){
-  const[page,setPage]=useState("dashboard");
-  const[user,setUser]=useState(null);
-  const[loading,setLoading]=useState(true);
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_unlocked");
+    if (saved === "true") setUnlocked(true);
+    setChecking(false);
+  }, []);
 
-  useEffect(()=>{
-    supabase.auth.getUser().then(({data:{user}})=>{
-      setUser(user);
-      setLoading(false);
-    });
-  },[]);
-if(!loading && user && !ADMIN_EMAILS.includes(user.email)) return(
-  <>
-    <style>{CSS}</style>
-    <div style={{minHeight:"100vh",background:"#020408",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:20}}>
-      <div style={{fontSize:64}}>🚫</div>
-      <div style={{fontWeight:800,fontSize:24}}>Access Denied</div>
-      <div style={{color:"#6A8CAC",fontSize:14,textAlign:"center"}}>You don't have permission to access the admin panel.</div>
-      <button style={{padding:"12px 28px",background:"linear-gradient(135deg,#38BDF8,#0EA5E9)",border:"none",borderRadius:10,color:"#020408",fontWeight:700,fontSize:14,cursor:"pointer"}} onClick={()=>window.location.href="/"}>Go to Home</button>
-    </div>
-  </>
-);
-  if(loading) return(
+  if (checking) return (
     <>
       <style>{CSS}</style>
-      <div style={{minHeight:"100vh",background:"#020408",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
+      <div style={{minHeight:"100vh",background:"#020408",display:"flex",alignItems:"center",justifyContent:"center"}}>
         <div style={{width:40,height:40,border:"2px solid #152236",borderTopColor:"#38BDF8",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-        <div style={{color:"#6A8CAC",fontSize:14}}>Loading admin panel...</div>
       </div>
     </>
   );
 
-  if(!user) return(
-    <>
-      <style>{CSS}</style>
-      <div style={{minHeight:"100vh",background:"#020408",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:20}}>
-        <div style={{fontSize:64}}>🔐</div>
-        <div style={{fontWeight:800,fontSize:24}}>Admin Login Required</div>
-        <div style={{color:"#6A8CAC",fontSize:14,textAlign:"center",maxWidth:360}}>You need to be logged in to access the admin panel.</div>
-        <button className="btn btn-primary" style={{padding:"12px 32px",fontSize:15}} onClick={()=>window.location.href="/login"}>Login to Continue →</button>
-      </div>
-    </>
-  );
+  if (!unlocked) return <PasswordScreen onUnlock={() => setUnlocked(true)} />;
 
-  const nav=[
-    {id:"dashboard",icon:"⊞",label:"Dashboard"},
-    {id:"questions",icon:"❓",label:"Questions"},
-    {id:"tests",    icon:"📋",label:"Tests"},
-    {id:"users",    icon:"👥",label:"Users"},
-    {id:"attempts", icon:"📊",label:"Attempts"},
-    {id:"ai",       icon:"🤖",label:"AI Generator"},
+  const nav = [
+    {id:"dashboard", icon:"⊞", label:"Dashboard"},
+    {id:"questions", icon:"❓", label:"Questions"},
+    {id:"tests",     icon:"📋", label:"Tests"},
+    {id:"users",     icon:"👥", label:"Users"},
+    {id:"attempts",  icon:"📊", label:"Attempts"},
+    {id:"ai",        icon:"🤖", label:"AI Generator"},
   ];
 
-  return(
+  return (
     <>
       <style>{CSS}</style>
       <div style={{display:"flex",minHeight:"100vh",background:"#020408"}}>
@@ -937,10 +777,6 @@ if(!loading && user && !ADMIN_EMAILS.includes(user.email)) return(
             <span style={{width:7,height:7,borderRadius:"50%",background:"#34D399",animation:"pulse 2s infinite",flexShrink:0}}/>
             <span style={{fontSize:11,color:"#34D399",fontWeight:700}}>PLATFORM LIVE</span>
           </div>
-          <div style={{padding:"8px 12px",background:"#38BDF808",border:"1px solid #38BDF81A",borderRadius:9,marginBottom:16}}>
-            <div style={{fontSize:11,color:"#6A8CAC"}}>Logged in as</div>
-            <div style={{fontSize:12,fontWeight:700,color:"#38BDF8",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>
-          </div>
           <nav style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
             {nav.map(n=>(
               <div key={n.id} className={`nav-item${page===n.id?" active":""}`} onClick={()=>setPage(n.id)}>
@@ -951,16 +787,16 @@ if(!loading && user && !ADMIN_EMAILS.includes(user.email)) return(
           </nav>
           <div style={{borderTop:"1px solid #0E1A2C",paddingTop:14,display:"flex",flexDirection:"column",gap:8}}>
             <button className="btn btn-ghost" style={{width:"100%",justifyContent:"center",fontSize:12}} onClick={()=>window.location.href="/"}>🏠 View Site</button>
-            <button className="btn btn-danger" style={{width:"100%",justifyContent:"center",fontSize:12}} onClick={()=>{supabase.auth.signOut();window.location.href="/login";}}>Sign Out</button>
+            <button className="btn btn-danger" style={{width:"100%",justifyContent:"center",fontSize:12}} onClick={()=>{sessionStorage.removeItem("admin_unlocked");setUnlocked(false);}}>🔒 Lock Panel</button>
           </div>
         </aside>
         <div style={{flex:1,overflowY:"auto"}} key={page} className="fade-in">
-          {page==="dashboard"&&<DashboardPage setPage={setPage}/>}
-          {page==="questions"&&<QuestionsPage/>}
-          {page==="tests"    &&<TestsPage/>}
-          {page==="users"    &&<UsersPage/>}
-          {page==="attempts" &&<AttemptsPage/>}
-          {page==="ai"       &&<AIGeneratorPage/>}
+          {page==="dashboard" && <DashboardHome setPage={setPage}/>}
+          {page==="questions" && <QuestionsPage/>}
+          {page==="tests"     && <TestsPage/>}
+          {page==="users"     && <UsersPage/>}
+          {page==="attempts"  && <AttemptsPage/>}
+          {page==="ai"        && <AIGeneratorPage/>}
         </div>
       </div>
     </>
