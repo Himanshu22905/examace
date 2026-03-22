@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 
 // ── ADMIN CREDENTIALS ─────────────────────────────────────────────────────────
 const ADMIN_EMAIL    = "Himanshu.mzn2019@gmail.com";
-const ADMIN_PASSWORD = "P@ndit123";
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const CSS = `
