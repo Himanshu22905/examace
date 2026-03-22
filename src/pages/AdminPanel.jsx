@@ -455,7 +455,7 @@ Return ONLY a valid JSON array, no extra text:
 [{"question":"text","options":["A","B","C","D"],"correct_answer":0,"explanation":"why correct"}]
 correct_answer is index 0-3.`;
     try{
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,{
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
       });
