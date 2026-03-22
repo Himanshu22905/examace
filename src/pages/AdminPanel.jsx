@@ -455,14 +455,18 @@ Return ONLY a valid JSON array, no extra text:
 [{"question":"text","options":["A","B","C","D"],"correct_answer":0,"explanation":"why correct"}]
 correct_answer is index 0-3.`;
     try{
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
-      });
-      const data=await res.json();
-      if(!data.candidates){setError("API Error: "+(data.error?.message||"Check your API key"));setLoading(false);return;}
-      const text=data.candidates[0].content.parts[0].text;
-      const clean=text.replace(/```json|```/g,"").trim();
+      const res=await fetch("https://api.groq.com/openai/v1/chat/completions",{
+  method:"POST",
+  headers:{"Content-Type":"application/json","Authorization":"Bearer "+apiKey},
+  body:JSON.stringify({
+    model:"llama-3.3-70b-versatile",
+    messages:[{role:"user",content:prompt}],
+    temperature:0.7
+  })
+});
+const data=await res.json();
+if(!data.choices){setError("API Error: "+(data.error?.message||"Check your Groq API key"));setLoading(false);return;}
+const text=data.choices[0].message.content;
       const parsed=JSON.parse(clean);
       setQuestions(parsed.map(q=>({...q,exam,subject,topic,difficulty})));
       setMessage(`✅ ${parsed.length} questions generated!`);
