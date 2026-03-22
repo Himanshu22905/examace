@@ -465,7 +465,6 @@ correct_answer is index 0-3.`;
   })
 });
 const data=await res.json();
-if(!data.choices){setError("API Error: "+(data.error?.message||"Check your Groq API key"));setLoading(false);return;}
 const text=data.choices[0].message.content;
       const parsed=JSON.parse(clean);
       setQuestions(parsed.map(q=>({...q,exam,subject,topic,difficulty})));

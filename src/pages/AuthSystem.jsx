@@ -141,7 +141,7 @@ export default function AuthSystem() {
 
   const LeftPanel = () => (
     <div className="left-panel">
-      <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:22, fontWeight:700, color:"#E8B84B", letterSpacing:3, marginBottom:40 }}>⚡ EXAMACE</div>
+      <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:22, fontWeight:700, color:"#E8B84B", letterSpacing:3, marginBottom:40 }}>⚡ MOCKIES</div>
       <div style={{ fontSize:30, fontWeight:800, lineHeight:1.2, marginBottom:16 }}>
         India's #1 Free<br /><span style={{ color:"#E8B84B" }}>Mock Test Platform</span>
       </div>
@@ -171,7 +171,7 @@ export default function AuthSystem() {
         <LeftPanel />
         <div className="right-panel">
           <div className="card fade-up">
-            <div className="logo" onClick={() => window.location.href="/"}>⚡ EXAMACE</div>
+            <div className="logo" onClick={() => window.location.href="/"}>⚡ MOCKIES</div>
 
             {/* LOGIN */}
             {mode==="login" && (
@@ -180,6 +180,7 @@ export default function AuthSystem() {
                 <div className="subtitle">Choose how you want to sign in</div>
                 <div style={{ display:"flex", gap:8, marginBottom:24 }}>
                   <button className={`btn-method${loginMethod==="email"?" active":""}`} onClick={() => { setLoginMethod("email"); reset(); }}>✉️ Email</button>
+                  <button className={`btn-method${loginMethod==="phone"?" active":""}`} onClick={() => { setLoginMethod("phone"); reset(); }}>📱 Mobile OTP</button>
                 </div>
                 {error   && <div className="error">{error}</div>}
                 {message && <div className="success">{message}</div>}

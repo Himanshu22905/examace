@@ -78,7 +78,7 @@ export default function LandingPage() {
   ]
 
   const reviews = [
-    { name:"Priya Sharma", exam:"SSC CGL 2024", score:"89%", text:"ExamAce mock tests are exactly like the real exam. Cleared SSC CGL in my first attempt!" },
+    { name:"Priya Sharma", exam:"SSC CGL 2024", score:"89%", text:"Mockies mock tests are exactly like the real exam. Cleared SSC CGL in my first attempt!" },
     { name:"Rahul Verma", exam:"IBPS PO 2024", score:"92%", text:"The analytics showed me my weak areas. Improved my score by 25% in just 2 months!" },
     { name:"Ananya Singh", exam:"JEE Main 2024", score:"94%", text:"Best free platform for JEE. Question quality is excellent and interface matches real exam." },
   ]
@@ -88,7 +88,7 @@ export default function LandingPage() {
       <style>{CSS}</style>
 
       <nav className="nav">
-        <div className="nav-logo" onClick={() => go("/")}>⚡ EXAMACE</div>
+        <div className="nav-logo" onClick={() => go("/")}>⚡ MOCKIES</div>
         <div className="nav-links">
           <a href="#exams" className="nav-link">Exams</a>
           <a href="#features" className="nav-link">Features</a>
@@ -145,7 +145,7 @@ export default function LandingPage() {
       </section>
 
       <section id="features" className="section" style={{ background:"#06090F" }}>
-        <h2 className="section-title">Why Choose <span className="gold-text">ExamAce?</span></h2>
+        <h2 className="section-title">Why Choose <span className="gold-text">Mockies?</span></h2>
         <p className="section-sub">Everything you need to crack your exam — all in one free platform</p>
         <div className="grid3">
           {features.map(f => (
@@ -174,7 +174,7 @@ export default function LandingPage() {
 
       <section className="section" style={{ background:"#06090F" }}>
         <h2 className="section-title">Student <span className="gold-text">Success Stories</span></h2>
-        <p className="section-sub">Real students, real results from ExamAce</p>
+        <p className="section-sub">Real students, real results from Mockies</p>
         <div className="grid3">
           {reviews.map(r => (
             <div className="review-card" key={r.name}>
@@ -199,7 +199,7 @@ export default function LandingPage() {
             Ready to <span className="gold-text">Crack Your Exam?</span>
           </h2>
           <p style={{ fontSize:16, color:"#7090B0", marginBottom:36, maxWidth:500, margin:"0 auto 36px" }}>
-            Join 50,000+ students already preparing smarter on ExamAce. It's completely free — forever.
+            Join 50,000+ students already preparing smarter on Mockies. It's completely free — forever.
           </p>
           <div style={{ display:"flex", gap:14, justifyContent:"center", flexWrap:"wrap" }}>
             <button className="btn-gold-lg" onClick={() => go("/login")}>Create Free Account →</button>
@@ -209,13 +209,13 @@ export default function LandingPage() {
       </section>
 
       <footer className="footer">
-        <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:18, fontWeight:700, color:"#E8B84B" }}>⚡ EXAMACE</div>
+        <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:18, fontWeight:700, color:"#E8B84B" }}>⚡ MOCKIES</div>
         <div style={{ display:"flex", gap:24 }}>
           {[["Exams","#exams"],["Features","#features"],["Login","/login"],["Admin","/admin"]].map(([l,h]) => (
             <a key={l} href={h} style={{ color:"#7090B0", fontSize:13, textDecoration:"none" }}>{l}</a>
           ))}
         </div>
-        <div style={{ color:"#7090B0", fontSize:13 }}>© 2025 ExamAce. Free forever for students.</div>
+        <div style={{ color:"#7090B0", fontSize:13 }}>© 2025 Mockies. Free forever for students.</div>
       </footer>
     </>
   )
