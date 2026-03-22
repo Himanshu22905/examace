@@ -465,6 +465,7 @@ correct_answer is index 0-3.`;
   })
 });
 const data=await res.json();
+if(!data.choices){setError("API Error: "+(data.error?.message||"Check your Groq API key"));setLoading(false);return;}
 const text=data.choices[0].message.content;
       const parsed=JSON.parse(clean);
       setQuestions(parsed.map(q=>({...q,exam,subject,topic,difficulty})));
@@ -868,6 +869,8 @@ function DashboardPage({setPage}){
 }
 
 // ── ROOT ──────────────────────────────────────────────────────────────────────
+const ADMIN_EMAILS = ["Himanshu.mzn2019@gmail.com"]; // 👈 Add YOUR email here
+
 export default function AdminPanel(){
   const[page,setPage]=useState("dashboard");
   const[user,setUser]=useState(null);
@@ -879,7 +882,17 @@ export default function AdminPanel(){
       setLoading(false);
     });
   },[]);
-
+if(!loading && user && !ADMIN_EMAILS.includes(user.email)) return(
+  <>
+    <style>{CSS}</style>
+    <div style={{minHeight:"100vh",background:"#020408",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:20}}>
+      <div style={{fontSize:64}}>🚫</div>
+      <div style={{fontWeight:800,fontSize:24}}>Access Denied</div>
+      <div style={{color:"#6A8CAC",fontSize:14,textAlign:"center"}}>You don't have permission to access the admin panel.</div>
+      <button style={{padding:"12px 28px",background:"linear-gradient(135deg,#38BDF8,#0EA5E9)",border:"none",borderRadius:10,color:"#020408",fontWeight:700,fontSize:14,cursor:"pointer"}} onClick={()=>window.location.href="/"}>Go to Home</button>
+    </div>
+  </>
+);
   if(loading) return(
     <>
       <style>{CSS}</style>
