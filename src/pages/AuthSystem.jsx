@@ -181,6 +181,24 @@ export default function AuthSystem() {
                 <div style={{ display:"flex", gap:8, marginBottom:24 }}>
                   <button className={`btn-method${loginMethod==="email"?" active":""}`} onClick={() => { setLoginMethod("email"); reset(); }}>✉️ Email</button>
                   <button className={`btn-method${loginMethod==="phone"?" active":""}`} onClick={() => { setLoginMethod("phone"); reset(); }}>📱 Mobile OTP</button>
+                  {/* Google Login */}
+<div style={{ margin:"16px 0" }}>
+  <button onClick={async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: "https://mockies.in/dashboard" }
+    });
+  }} style={{ width:"100%", padding:"13px", background:"#ffffff", border:"1.5px solid #e0e0e0", borderRadius:"12px", color:"#1f1f1f", fontFamily:"'Outfit',sans-serif", fontSize:"15px", fontWeight:"700", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:"10px", transition:"all 0.2s" }}>
+    <img src="https://www.google.com/favicon.ico" width="20" height="20" alt="G"/>
+    Continue with Google
+  </button>
+</div>
+
+<div className="divider">
+  <div className="divider-line"/>
+  <span className="divider-text">OR</span>
+  <div className="divider-line"/>
+</div>
                 </div>
                 {error   && <div className="error">{error}</div>}
                 {message && <div className="success">{message}</div>}
