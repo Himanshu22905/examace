@@ -14,6 +14,7 @@ export default function AuthSystem() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(["","","","","",""]);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -45,7 +46,10 @@ export default function AuthSystem() {
     .btn-main:disabled{opacity:0.5;cursor:not-allowed;}
     .btn-ghost{width:100%;padding:13px;background:transparent;border:1.5px solid #0F1C2E;border-radius:12px;color:#7090B0;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;}
     .btn-ghost:hover{border-color:#E8B84B44;color:#E8B84B;}
-    .btn-method{flex:1;padding:12px;border-radius:10px;border:1.5px solid #0F1C2E;background:transparent;color:#7090B0;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+    .btn-google{width:100%;padding:13px;background:#ffffff;border:1.5px solid #e0e0e0;border-radius:12px;color:#1f1f1f;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;margin-bottom:4px;}
+    .btn-google:hover{background:#f5f5f5;border-color:#c0c0c0;}
+    .btn-google:disabled{opacity:0.6;cursor:not-allowed;}
+    .btn-method{flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid #0F1C2E;background:transparent;color:#7090B0;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;}
     .btn-method.active{border-color:#E8B84B;background:#E8B84B14;color:#E8B84B;}
     .switch-txt{text-align:center;margin-top:20px;font-size:13px;color:#7090B0;}
     .switch-btn{color:#E8B84B;font-weight:700;cursor:pointer;background:none;border:none;font-family:'Outfit',sans-serif;font-size:13px;}
@@ -60,17 +64,36 @@ export default function AuthSystem() {
     .step-bar{display:flex;gap:6px;margin-bottom:28px;}
     .step-dot{height:4px;border-radius:999px;flex:1;transition:background 0.3s;}
     .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(3,5,8,0.3);border-top-color:#030508;border-radius:50%;animation:spin 0.7s linear infinite;}
-    .otp-wrap{display:flex;gap:8px;margin-bottom:20px;}
-    .otp-input{flex:1;text-align:center;background:#030508;border:1.5px solid #0F1C2E;border-radius:12px;padding:16px 0;color:#EEF2FF;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;outline:none;transition:border-color 0.2s;}
-    .otp-input:focus{border-color:#E8B84B;}
+    .spinner-white{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#EEF2FF;border-radius:50%;animation:spin 0.7s linear infinite;}
+    .otp-wrap{display:flex;gap:8px;margin-bottom:20px;justify-content:center;}
+    .otp-box{width:44px;height:52px;text-align:center;background:#030508;border:1.5px solid #0F1C2E;border-radius:12px;color:#EEF2FF;font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;outline:none;transition:border-color 0.2s;flex-shrink:0;}
+    .otp-box:focus{border-color:#E8B84B;}
     .phone-row{display:flex;gap:8px;margin-bottom:16px;}
     .cc-select{background:#030508;border:1.5px solid #0F1C2E;border-radius:12px;padding:13px 10px;color:#EEF2FF;font-family:'Outfit',sans-serif;font-size:13px;outline:none;width:88px;flex-shrink:0;}
+    .divider{display:flex;align-items:center;gap:12px;margin:16px 0;}
+    .divider-line{flex:1;height:1px;background:#0F1C2E;}
+    .divider-text{font-size:12px;color:#7090B0;font-weight:600;white-space:nowrap;}
   `;
 
   const reset = () => { setError(""); setMessage(""); setOtp(["","","","","",""]); };
   const goLogin = () => { setMode("login"); setStep(1); setLoginMethod("email"); reset(); };
   const goReg   = () => { setMode("register"); setStep(1); reset(); };
 
+  // ── GOOGLE LOGIN ──────────────────────────────────────────────────────────
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/dashboard",
+        queryParams: { access_type: "offline", prompt: "consent" }
+      }
+    });
+    if (error) { setError(error.message); setGoogleLoading(false); }
+  };
+
+  // ── EMAIL LOGIN ───────────────────────────────────────────────────────────
   const handleEmailLogin = async () => {
     if (!email || !password) { setError("Please fill in all fields"); return; }
     setLoading(true); setError("");
@@ -79,34 +102,33 @@ export default function AuthSystem() {
     window.location.href = "/dashboard";
   };
 
+  // ── PHONE OTP SEND ────────────────────────────────────────────────────────
   const handleSendOTP = async () => {
-    if (!phone || phone.length < 10) { setError("Enter a valid 10-digit mobile number"); return; }
+    if (!phone || phone.length < 10) { setError("Enter valid 10-digit number"); return; }
     setLoading(true); setError("");
-    const fullPhone = "+91" + phone.replace(/\D/g,"");
-    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+    const { error } = await supabase.auth.signInWithOtp({ phone: "+91" + phone });
     if (error) { setError(error.message); setLoading(false); return; }
     setMessage("OTP sent to +91 " + phone);
     setMode("phone-verify");
     setLoading(false);
   };
 
+  // ── PHONE OTP VERIFY ──────────────────────────────────────────────────────
   const handleVerifyOTP = async () => {
     const code = otp.join("");
-    if (code.length < 6) { setError("Enter the complete 6-digit OTP"); return; }
+    if (code.length < 6) { setError("Enter complete 6-digit OTP"); return; }
     setLoading(true); setError("");
-    const fullPhone = "+91" + phone.replace(/\D/g,"");
-    const { data, error } = await supabase.auth.verifyOtp({ phone: fullPhone, token: code, type: "sms" });
+    const { data, error } = await supabase.auth.verifyOtp({ phone: "+91" + phone, token: code, type: "sms" });
     if (error) { setError(error.message); setLoading(false); return; }
-    if (data?.user) {
-      await supabase.from("profiles").upsert({ id: data.user.id, mobile: phone });
-    }
+    if (data?.user) await supabase.from("profiles").upsert({ id: data.user.id, mobile: phone });
     window.location.href = "/dashboard";
   };
 
+  // ── REGISTER ─────────────────────────────────────────────────────────────
   const handleRegister = async () => {
-    if (!name||!email||!password||!mobile) { setError("Please fill in all fields"); return; }
-    if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
-    if (mobile.length < 10) { setError("Enter a valid 10-digit mobile number"); return; }
+    if (!name||!email||!password||!mobile) { setError("Please fill all fields"); return; }
+    if (password.length < 6) { setError("Password min 6 characters"); return; }
+    if (mobile.length < 10) { setError("Enter valid 10-digit mobile"); return; }
     setLoading(true); setError("");
     const { data, error } = await supabase.auth.signUp({
       email, password,
@@ -116,20 +138,22 @@ export default function AuthSystem() {
     if (data?.user) {
       await supabase.from("profiles").upsert({ id: data.user.id, full_name: name, mobile, exam_preparing: exam });
     }
-    setMessage("Account created! You can now login.");
+    setMessage("✅ Account created! Check your email to verify then login.");
     setLoading(false);
-    setTimeout(() => goLogin(), 2500);
+    setTimeout(() => goLogin(), 3000);
   };
 
+  // ── FORGOT PASSWORD ───────────────────────────────────────────────────────
   const handleForgot = async () => {
     if (!email) { setError("Please enter your email"); return; }
     setLoading(true); setError("");
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/login" });
     if (error) setError(error.message);
-    else setMessage("Reset link sent! Check your email.");
+    else setMessage("✅ Reset link sent! Check your email.");
     setLoading(false);
   };
 
+  // ── OTP INPUT ─────────────────────────────────────────────────────────────
   const handleOtpChange = (i, val) => {
     if (!/^\d*$/.test(val)) return;
     const n = [...otp]; n[i] = val.slice(-1); setOtp(n);
@@ -139,6 +163,7 @@ export default function AuthSystem() {
     if (e.key==="Backspace" && !otp[i] && i>0) document.getElementById("otp-"+(i-1))?.focus();
   };
 
+  // ── LEFT PANEL ────────────────────────────────────────────────────────────
   const LeftPanel = () => (
     <div className="left-panel">
       <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:22, fontWeight:700, color:"#E8B84B", letterSpacing:3, marginBottom:40 }}>⚡ MOCKIES</div>
@@ -150,7 +175,7 @@ export default function AuthSystem() {
         ["🎯","Real CBT Experience","Exactly like the actual exam"],
         ["📊","Detailed Analytics","Track weak areas and improvement"],
         ["🏆","All India Rankings","See where you stand nationally"],
-        ["📱","Mobile OTP Login","Quick login — no password needed"],
+        ["🔒","Secure & Private","Your data is always protected"],
         ["💯","100% Free Forever","No hidden charges ever"],
       ].map(([icon,title,sub]) => (
         <div key={title} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
@@ -173,71 +198,75 @@ export default function AuthSystem() {
           <div className="card fade-up">
             <div className="logo" onClick={() => window.location.href="/"}>⚡ MOCKIES</div>
 
-            {/* LOGIN */}
+            {/* ── LOGIN ── */}
             {mode==="login" && (
               <>
                 <div className="title">Welcome <span className="gold">Back!</span></div>
-                <div className="subtitle">Choose how you want to sign in</div>
-                <div style={{ display:"flex", gap:8, marginBottom:24 }}>
+                <div className="subtitle">Sign in to continue your preparation</div>
+
+                {/* Google Login */}
+                <button className="btn-google" onClick={handleGoogleLogin} disabled={googleLoading}>
+                  {googleLoading ? (
+                    <><div style={{ width:20, height:20, border:"2px solid #ccc", borderTopColor:"#1f1f1f", borderRadius:"50%", animation:"spin 0.7s linear infinite" }}/> Connecting...</>
+                  ) : (
+                    <><svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Continue with Google</>
+                  )}
+                </button>
+
+                <div className="divider">
+                  <div className="divider-line"/>
+                  <span className="divider-text">OR SIGN IN WITH</span>
+                  <div className="divider-line"/>
+                </div>
+
+                {/* Method toggle */}
+                <div style={{ display:"flex", gap:8, marginBottom:20 }}>
                   <button className={`btn-method${loginMethod==="email"?" active":""}`} onClick={() => { setLoginMethod("email"); reset(); }}>✉️ Email</button>
                   <button className={`btn-method${loginMethod==="phone"?" active":""}`} onClick={() => { setLoginMethod("phone"); reset(); }}>📱 Mobile OTP</button>
-                  {/* Google Login */}
-<div style={{ margin:"16px 0" }}>
-  <button onClick={async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: "https://mockies.in/dashboard" }
-    });
-  }} style={{ width:"100%", padding:"13px", background:"#ffffff", border:"1.5px solid #e0e0e0", borderRadius:"12px", color:"#1f1f1f", fontFamily:"'Outfit',sans-serif", fontSize:"15px", fontWeight:"700", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:"10px", transition:"all 0.2s" }}>
-    <img src="https://www.google.com/favicon.ico" width="20" height="20" alt="G"/>
-    Continue with Google
-  </button>
-</div>
-
-<div className="divider">
-  <div className="divider-line"/>
-  <span className="divider-text">OR</span>
-  <div className="divider-line"/>
-</div>
                 </div>
+
                 {error   && <div className="error">{error}</div>}
                 {message && <div className="success">{message}</div>}
+
                 {loginMethod==="email" && (
                   <>
                     <label className="label">EMAIL ADDRESS</label>
-                    <input className="input" type="email" placeholder="you@email.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key==="Enter"&&handleEmailLogin()} />
+                    <input className="input" type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleEmailLogin()}/>
                     <label className="label">PASSWORD</label>
                     <div className="pass-wrap">
-                      <input className="input" type={showPass?"text":"password"} placeholder="Enter password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key==="Enter"&&handleEmailLogin()} />
-                      <button className="pass-eye" onClick={() => setShowPass(!showPass)}>{showPass?"🙈":"👁"}</button>
+                      <input className="input" type={showPass?"text":"password"} placeholder="Enter password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleEmailLogin()}/>
+                      <button className="pass-eye" onClick={()=>setShowPass(!showPass)}>{showPass?"🙈":"👁"}</button>
                     </div>
                     <div style={{ textAlign:"right", marginBottom:20 }}>
-                      <button className="switch-btn" onClick={() => { setMode("forgot"); reset(); }}>Forgot password?</button>
+                      <button className="switch-btn" onClick={()=>{setMode("forgot");reset();}}>Forgot password?</button>
                     </div>
                     <button className="btn-main" onClick={handleEmailLogin} disabled={loading}>
-                      {loading && <span className="spinner"/>}{loading?"Signing in...":"Sign In →"}
+                      {loading&&<span className="spinner"/>}{loading?"Signing in...":"Sign In →"}
                     </button>
                   </>
                 )}
+
                 {loginMethod==="phone" && (
                   <>
                     <label className="label">MOBILE NUMBER</label>
                     <div className="phone-row">
                       <select className="cc-select"><option>🇮🇳 +91</option></select>
-                      <input className="input" style={{ marginBottom:0 }} type="tel" placeholder="10-digit number" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g,""))} maxLength={10} />
+                      <input className="input" style={{marginBottom:0}} type="tel" placeholder="10-digit number" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,""))} maxLength={10}/>
                     </div>
-                    <button className="btn-main" style={{ marginTop:8 }} onClick={handleSendOTP} disabled={loading}>
-                      {loading && <span className="spinner"/>}{loading?"Sending OTP...":"Send OTP →"}
+                    <button className="btn-main" style={{marginTop:8}} onClick={handleSendOTP} disabled={loading}>
+                      {loading&&<span className="spinner"/>}{loading?"Sending OTP...":"Send OTP →"}
                     </button>
                   </>
                 )}
+
                 <div className="switch-txt">
                   Don't have an account?{" "}<button className="switch-btn" onClick={goReg}>Create one free</button>
                 </div>
               </>
             )}
 
-            {/* OTP VERIFY */}
+            {/* ── PHONE OTP VERIFY ── */}
             {mode==="phone-verify" && (
               <>
                 <div className="title">Enter <span className="gold">OTP</span></div>
@@ -246,77 +275,100 @@ export default function AuthSystem() {
                 {message && <div className="success">{message}</div>}
                 <label className="label">ENTER 6-DIGIT OTP</label>
                 <div className="otp-wrap">
-                  {otp.map((d,i) => (
-                    <input key={i} id={"otp-"+i} className="otp-input" type="tel" maxLength={1} value={d}
-                      onChange={e => handleOtpChange(i,e.target.value)} onKeyDown={e => handleOtpKey(i,e)} />
+                  {otp.map((d,i)=>(
+                    <input key={i} id={"otp-"+i} className="otp-box" type="tel" maxLength={1} value={d}
+                      onChange={e=>handleOtpChange(i,e.target.value)} onKeyDown={e=>handleOtpKey(i,e)}/>
                   ))}
                 </div>
                 <button className="btn-main" onClick={handleVerifyOTP} disabled={loading}>
-                  {loading && <span className="spinner"/>}{loading?"Verifying...":"Verify & Login →"}
+                  {loading&&<span className="spinner"/>}{loading?"Verifying...":"Verify & Login →"}
                 </button>
-                <button className="btn-ghost" onClick={() => { setMode("login"); setLoginMethod("phone"); reset(); }}>← Change Number</button>
-                <div style={{ textAlign:"center", marginTop:14, fontSize:13, color:"#7090B0" }}>
+                <button className="btn-ghost" onClick={()=>{setMode("login");setLoginMethod("phone");reset();}}>← Change Number</button>
+                <div style={{textAlign:"center",marginTop:14,fontSize:13,color:"#7090B0"}}>
                   Didn't receive?{" "}<button className="switch-btn" onClick={handleSendOTP}>Resend OTP</button>
                 </div>
               </>
             )}
 
-            {/* REGISTER */}
+            {/* ── REGISTER ── */}
             {mode==="register" && (
               <>
                 <div className="step-bar">
-                  {[1,2].map(s => <div key={s} className="step-dot" style={{ background:step>=s?"#E8B84B":"#0F1C2E" }} />)}
+                  {[1,2].map(s=><div key={s} className="step-dot" style={{background:step>=s?"#E8B84B":"#0F1C2E"}}/>)}
                 </div>
                 <div className="title">Create <span className="gold">Account</span></div>
                 <div className="subtitle">{step===1?"Step 1 — Your basic details":"Step 2 — Your target exam"}</div>
+
+                {/* Google Register */}
+                {step===1 && (
+                  <>
+                    <button className="btn-google" onClick={handleGoogleLogin} disabled={googleLoading}>
+                      {googleLoading ? (
+                        <><div style={{width:20,height:20,border:"2px solid #ccc",borderTopColor:"#1f1f1f",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Connecting...</>
+                      ) : (
+                        <><svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        Sign up with Google</>
+                      )}
+                    </button>
+                    <div className="divider">
+                      <div className="divider-line"/>
+                      <span className="divider-text">OR REGISTER WITH EMAIL</span>
+                      <div className="divider-line"/>
+                    </div>
+                  </>
+                )}
+
                 {error   && <div className="error">{error}</div>}
                 {message && <div className="success">{message}</div>}
+
                 {step===1 && (
                   <>
                     <label className="label">FULL NAME</label>
-                    <input className="input" type="text" placeholder="Your full name" value={name} onChange={e => setName(e.target.value)} />
+                    <input className="input" type="text" placeholder="Your full name" value={name} onChange={e=>setName(e.target.value)}/>
                     <label className="label">MOBILE NUMBER</label>
                     <div className="phone-row">
                       <select className="cc-select"><option>🇮🇳 +91</option></select>
-                      <input className="input" style={{ marginBottom:0 }} type="tel" placeholder="10-digit number" value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g,""))} maxLength={10} />
+                      <input className="input" style={{marginBottom:0}} type="tel" placeholder="10-digit number" value={mobile} onChange={e=>setMobile(e.target.value.replace(/\D/g,""))} maxLength={10}/>
                     </div>
-                    <div style={{ marginBottom:16 }} />
+                    <div style={{marginBottom:16}}/>
                     <label className="label">EMAIL ADDRESS</label>
-                    <input className="input" type="email" placeholder="you@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+                    <input className="input" type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)}/>
                     <label className="label">PASSWORD</label>
                     <div className="pass-wrap">
-                      <input className="input" type={showPass?"text":"password"} placeholder="Min 6 characters" value={password} onChange={e => setPassword(e.target.value)} />
-                      <button className="pass-eye" onClick={() => setShowPass(!showPass)}>{showPass?"🙈":"👁"}</button>
+                      <input className="input" type={showPass?"text":"password"} placeholder="Min 6 characters" value={password} onChange={e=>setPassword(e.target.value)}/>
+                      <button className="pass-eye" onClick={()=>setShowPass(!showPass)}>{showPass?"🙈":"👁"}</button>
                     </div>
-                    <button className="btn-main" style={{ marginTop:8 }} onClick={() => {
-                      if (!name||!email||!password||!mobile){setError("Please fill all fields");return;}
-                      if (password.length<6){setError("Password min 6 characters");return;}
-                      if (mobile.length<10){setError("Enter valid 10-digit number");return;}
+                    <button className="btn-main" style={{marginTop:8}} onClick={()=>{
+                      if(!name||!email||!password||!mobile){setError("Please fill all fields");return;}
+                      if(password.length<6){setError("Password min 6 characters");return;}
+                      if(mobile.length<10){setError("Enter valid 10-digit mobile");return;}
                       setError("");setStep(2);
                     }}>Next →</button>
                   </>
                 )}
+
                 {step===2 && (
                   <>
                     <label className="label">SELECT YOUR TARGET EXAM</label>
                     <div className="exam-grid">
-                      {exams.map(e => (
-                        <button key={e} className={`exam-chip${exam===e?" selected":""}`} onClick={() => setExam(e)}>{e}</button>
+                      {exams.map(e=>(
+                        <button key={e} className={`exam-chip${exam===e?" selected":""}`} onClick={()=>setExam(e)}>{e}</button>
                       ))}
                     </div>
                     <button className="btn-main" onClick={handleRegister} disabled={loading}>
-                      {loading && <span className="spinner"/>}{loading?"Creating...":"Create Free Account →"}
+                      {loading&&<span className="spinner"/>}{loading?"Creating...":"Create Free Account →"}
                     </button>
-                    <button className="btn-ghost" onClick={() => {setStep(1);setError("");}}>← Back</button>
+                    <button className="btn-ghost" onClick={()=>{setStep(1);setError("");}}>← Back</button>
                   </>
                 )}
+
                 <div className="switch-txt">
                   Already have an account?{" "}<button className="switch-btn" onClick={goLogin}>Sign in</button>
                 </div>
               </>
             )}
 
-            {/* FORGOT */}
+            {/* ── FORGOT PASSWORD ── */}
             {mode==="forgot" && (
               <>
                 <div className="title">Reset <span className="gold">Password</span></div>
@@ -324,9 +376,9 @@ export default function AuthSystem() {
                 {error   && <div className="error">{error}</div>}
                 {message && <div className="success">{message}</div>}
                 <label className="label">EMAIL ADDRESS</label>
-                <input className="input" type="email" placeholder="you@email.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key==="Enter"&&handleForgot()} />
+                <input className="input" type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleForgot()}/>
                 <button className="btn-main" onClick={handleForgot} disabled={loading}>
-                  {loading && <span className="spinner"/>}{loading?"Sending...":"Send Reset Link →"}
+                  {loading&&<span className="spinner"/>}{loading?"Sending...":"Send Reset Link →"}
                 </button>
                 <button className="btn-ghost" onClick={goLogin}>← Back to Login</button>
               </>
