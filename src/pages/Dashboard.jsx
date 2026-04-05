@@ -272,36 +272,99 @@ function HistoryPage({ attempts }) {
 }
 
 // ── TESTS PAGE ────────────────────────────────────────────────────────────────
+const TEST_CATEGORY_META = {
+  SSC: { icon: "???", color: "#E8B84B", subtitle: "Staff Selection Commission" },
+  Banking: { icon: "??", color: "#34D399", subtitle: "Bank PO and Clerk Exams" },
+  UPSC: { icon: "???", color: "#38BDF8", subtitle: "Civil Services and Government Exams" },
+  JEE: { icon: "??", color: "#A78BFA", subtitle: "Engineering Entrance Exams" },
+  RRB: { icon: "??", color: "#FB923C", subtitle: "Railway Recruitment Exams" },
+  Other: { icon: "??", color: "#7090B0", subtitle: "Other Competitive Exams" }
+};
+
+const CATEGORY_ORDER = ["SSC", "Banking", "UPSC", "JEE", "RRB", "Other"];
+
+function getTestCategory(examValue = "") {
+  const exam = String(examValue).toUpperCase();
+  if (exam.includes("SSC")) return "SSC";
+  if (exam.includes("BANK") || exam.includes("IBPS") || exam.includes("SBI")) return "Banking";
+  if (exam.includes("UPSC") || exam.includes("PSC")) return "UPSC";
+  if (exam.includes("JEE")) return "JEE";
+  if (exam.includes("RRB") || exam.includes("RAIL")) return "RRB";
+  return "Other";
+}
+
+function getQuestionCount(questionIds) {
+  if (Array.isArray(questionIds)) return questionIds.length;
+  if (!questionIds) return 0;
+  try {
+    const parsed = JSON.parse(questionIds);
+    return Array.isArray(parsed) ? parsed.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
 function TestsPage({ tests }) {
+  const grouped = tests.reduce((acc, test) => {
+    const category = getTestCategory(test.exam);
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(test);
+    return acc;
+  }, {});
+
+  const visibleCategories = CATEGORY_ORDER.filter((category) => (grouped[category] || []).length > 0);
+
   return (
-    <div style={{ padding:"20px 16px", maxWidth:800 }}>
+    <div style={{ padding:"20px 16px", maxWidth:980 }}>
       <h2 style={{ fontWeight:800, fontSize:20, marginBottom:4 }}>Available Tests</h2>
-      <p style={{ color:"#7090B0", fontSize:13, marginBottom:20 }}>{tests.length} tests available</p>
+      <p style={{ color:"#7090B0", fontSize:13, marginBottom:20 }}>{tests.length} tests available across {visibleCategories.length || 0} categories</p>
       {tests.length===0 ? (
         <div style={{ textAlign:"center", padding:"60px 20px", background:"#090E18", borderRadius:20, border:"1px solid #0F1C2E" }}>
-          <div style={{ fontSize:48, marginBottom:14 }}>📋</div>
+          <div style={{ fontSize:48, marginBottom:14 }}>??</div>
           <div style={{ fontWeight:700, fontSize:16 }}>No tests yet</div>
           <div style={{ color:"#7090B0", fontSize:13, marginTop:8 }}>Check back soon!</div>
         </div>
-      ) : tests.map((t,i)=>(
-        <div key={t.id} className="card test-card fade-up" style={{ animationDelay:`${i*0.07}s`, display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-          <div style={{ flex:1 }}>
-            <div style={{ fontWeight:800, fontSize:15, marginBottom:8 }}>{t.name}</div>
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-              <Tag color="#E8B84B">{t.exam}</Tag>
-              <Tag color="#38BDF8">{t.type}</Tag>
-              <Tag color="#7090B0">⏱ {t.time_limit}m</Tag>
-              <Tag color="#7090B0">📝 {Array.isArray(t.question_ids)?t.question_ids.length:(JSON.parse(t.question_ids||"[]")).length} Qs</Tag>
+      ) : (
+        visibleCategories.map((category, categoryIndex) => {
+          const categoryTests = grouped[category] || [];
+          const meta = TEST_CATEGORY_META[category] || TEST_CATEGORY_META.Other;
+
+          return (
+            <div key={category} className="card fade-up" style={{ animationDelay:`${categoryIndex*0.06}s`, marginBottom:14, padding:"16px 14px" }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:12 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:42, height:42, borderRadius:12, background:meta.color+"1A", border:`1px solid ${meta.color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>
+                    {meta.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight:800, fontSize:16, color:meta.color }}>{category}</div>
+                    <div style={{ color:"#7090B0", fontSize:12 }}>{meta.subtitle}</div>
+                  </div>
+                </div>
+                <Tag color={meta.color}>{categoryTests.length} test{categoryTests.length>1?"s":""}</Tag>
+              </div>
+
+              {categoryTests.map((t, i) => (
+                <div key={t.id} className="test-card" style={{ background:"#06090F", border:"1px solid #0F1C2E", borderRadius:12, padding:"14px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:i===categoryTests.length-1?0:10 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:800, fontSize:14, marginBottom:8 }}>{t.name}</div>
+                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                      <Tag color={meta.color}>{t.exam || category}</Tag>
+                      <Tag color="#38BDF8">{t.type}</Tag>
+                      <Tag color="#7090B0">? {t.time_limit}m</Tag>
+                      <Tag color="#7090B0">?? {getQuestionCount(t.question_ids)} Qs</Tag>
+                    </div>
+                  </div>
+                  <button className="btn btn-gold" style={{ flexShrink:0, marginLeft:16, padding:"10px 20px" }} onClick={()=>window.location.href="/test"}>Start ?</button>
+                </div>
+              ))}
             </div>
-          </div>
-          <button className="btn btn-gold" style={{ flexShrink:0, marginLeft:16, padding:"10px 20px" }} onClick={()=>window.location.href="/test"}>Start →</button>
-        </div>
-      ))}
+          );
+        })
+      )}
     </div>
   );
 }
-
-// ── HOME PAGE ─────────────────────────────────────────────────────────────────
 function HomePage({ profile, attempts, tests, firstName, setPage }) {
   const totalTests  = attempts.length;
   const avgScore    = totalTests>0 ? Math.round(attempts.reduce((a,t)=>a+(t.score||0),0)/totalTests) : 0;
