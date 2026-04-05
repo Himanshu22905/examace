@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
+const FALLBACK_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || "P@ndit123";
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const CSS = `
@@ -826,11 +827,14 @@ function DashboardHome({setPage}){
 }
 
 // ── ROOT APP ──────────────────────────────────────────────────────────────────
-export default function AdminPanel() {
+export default function AdminPanel({ allowPasswordFallback = true }) {
   const [page, setPage]       = useState("dashboard");
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [accessError, setAccessError] = useState("");
+  const [manualUnlocked, setManualUnlocked] = useState(false);
+  const [manualPass, setManualPass] = useState("");
+  const [manualError, setManualError] = useState("");
 
   useEffect(() => {
     const verifyAdmin = async () => {
@@ -869,14 +873,46 @@ export default function AdminPanel() {
     </>
   );
 
-  if (!allowed) return (
+  if (!(allowed || manualUnlocked)) return (
     <>
       <style>{CSS}</style>
       <div style={{minHeight:"100vh",background:"#020408",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-        <div style={{background:"#080C18",border:"1px solid #152236",borderRadius:16,padding:24,maxWidth:520,width:"100%"}}>
+        <div style={{background:"#080C18",border:"1px solid #152236",borderRadius:16,padding:24,maxWidth:560,width:"100%"}}>
           <div style={{fontWeight:800,fontSize:22,marginBottom:8}}>Admin Access Blocked</div>
           <div style={{color:"#6A8CAC",fontSize:14,marginBottom:14}}>{accessError || "You are not authorized to open admin panel."}</div>
-          <button className="btn btn-ghost" onClick={()=>window.location.href="/dashboard"}>Go to Dashboard</button>
+          {allowPasswordFallback && (
+            <div style={{marginBottom:14,padding:12,border:"1px solid #0E1A2C",borderRadius:10,background:"#050810"}}>
+              <div style={{fontSize:12,color:"#6A8CAC",marginBottom:8}}>Fallback Access (Temporary)</div>
+              <input
+                className="input"
+                type="password"
+                placeholder="Enter admin fallback password"
+                value={manualPass}
+                onChange={(e)=>{setManualPass(e.target.value);setManualError("");}}
+                onKeyDown={(e)=>{
+                  if(e.key==="Enter"){
+                    if(manualPass===FALLBACK_ADMIN_PASSWORD){setManualUnlocked(true);}
+                    else{setManualError("Invalid fallback password.");}
+                  }
+                }}
+                style={{marginBottom:8}}
+              />
+              {manualError && <div style={{fontSize:12,color:"#F87171",marginBottom:8}}>{manualError}</div>}
+              <button
+                className="btn btn-primary"
+                onClick={()=>{
+                  if(manualPass===FALLBACK_ADMIN_PASSWORD){setManualUnlocked(true);}
+                  else{setManualError("Invalid fallback password.");}
+                }}
+              >
+                Unlock With Password
+              </button>
+            </div>
+          )}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button className="btn btn-ghost" onClick={()=>window.location.href="/dashboard"}>Go to Dashboard</button>
+            <button className="btn btn-ghost" onClick={()=>window.location.href="/admin-direct"}>Open Separate Admin</button>
+          </div>
         </div>
       </div>
     </>

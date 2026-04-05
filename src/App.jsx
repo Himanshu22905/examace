@@ -16,6 +16,7 @@ export default function App() {
         <Route path="/test"      element={<MockTestInterface />} />
         <Route path="/daily-quiz" element={<DailyQuiz />} />
         <Route path="/admin"     element={<AdminPanel />} />
+        <Route path="/admin-direct" element={<AdminPanel allowPasswordFallback={true} />} />
       </Routes>
     </BrowserRouter>
   )
