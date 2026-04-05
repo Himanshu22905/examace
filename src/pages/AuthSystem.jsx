@@ -17,6 +17,7 @@ export default function AuthSystem() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [otpHint, setOtpHint] = useState("");
 
   const exams = ["SSC CGL","SSC CHSL","IBPS PO","IBPS Clerk","SBI PO","SBI Clerk","UPSC CSE","JEE Main","JEE Advanced","RRB NTPC","State PSC"];
 
@@ -105,9 +106,21 @@ export default function AuthSystem() {
   // ── PHONE OTP SEND ────────────────────────────────────────────────────────
   const handleSendOTP = async () => {
     if (!phone || phone.length < 10) { setError("Enter valid 10-digit number"); return; }
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setOtpHint("");
     const { error } = await supabase.auth.signInWithOtp({ phone: "+91" + phone });
-    if (error) { setError(error.message); setLoading(false); return; }
+    if (error) {
+      const msg = String(error.message || "");
+      if (msg.toLowerCase().includes("not a valid phone number")) {
+        setError("Phone format invalid. Enter 10 digits without country code.");
+      } else if (msg.toLowerCase().includes("sms") || msg.toLowerCase().includes("twilio") || msg.toLowerCase().includes("verify")) {
+        setError("OTP failed on Twilio test mode. Free tier works only for verified numbers.");
+        setOtpHint("Tip: verify this number in Twilio console or use Email/Google login.");
+      } else {
+        setError(msg);
+      }
+      setLoading(false);
+      return;
+    }
     setMessage("OTP sent to +91 " + phone);
     setMode("phone-verify");
     setLoading(false);
@@ -257,6 +270,10 @@ export default function AuthSystem() {
                     <button className="btn-main" style={{marginTop:8}} onClick={handleSendOTP} disabled={loading}>
                       {loading&&<span className="spinner"/>}{loading?"Sending OTP...":"Send OTP →"}
                     </button>
+                    <div style={{marginTop:10,fontSize:12,color:"#7090B0",lineHeight:1.5}}>
+                      OTP uses Twilio via Supabase. In free mode, only Twilio-verified numbers can receive OTP.
+                    </div>
+                    {otpHint && <div style={{marginTop:8,fontSize:12,color:"#E8B84B"}}>{otpHint}</div>}
                   </>
                 )}
 

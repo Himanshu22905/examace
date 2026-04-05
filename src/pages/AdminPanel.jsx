@@ -682,6 +682,137 @@ function AttemptsPage(){
 }
 
 // ── DASHBOARD HOME ────────────────────────────────────────────────────────────
+function SuggestionsPage(){
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    title: "",
+    type: "Book",
+    exam: "All",
+    weak_topic: "",
+    message: "",
+    affiliate_url: "",
+    priority: 1,
+    active: true
+  });
+
+  const fetchItems = async () => {
+    setLoading(true);
+    setError("");
+    const { data, error } = await supabase
+      .from("admin_suggestions")
+      .select("*")
+      .order("priority", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      setError(error.message);
+      setItems([]);
+    } else {
+      setItems(data || []);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchItems(); }, []);
+
+  const updateField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const saveSuggestion = async () => {
+    if (!form.title.trim() || !form.message.trim()) {
+      setToast({ msg: "Title and message are required", type: "error" });
+      return;
+    }
+    setSaving(true);
+    const payload = {
+      title: form.title.trim(),
+      type: form.type,
+      exam: form.exam,
+      weak_topic: form.weak_topic.trim() || null,
+      message: form.message.trim(),
+      affiliate_url: form.affiliate_url.trim() || null,
+      priority: Number(form.priority) || 1,
+      active: !!form.active
+    };
+    const { error } = await supabase.from("admin_suggestions").insert(payload);
+    if (error) {
+      setToast({ msg: error.message, type: "error" });
+    } else {
+      setToast({ msg: "Suggestion added", type: "success" });
+      setForm({ title: "", type: "Book", exam: "All", weak_topic: "", message: "", affiliate_url: "", priority: 1, active: true });
+      fetchItems();
+    }
+    setSaving(false);
+  };
+
+  const toggleActive = async (row) => {
+    await supabase.from("admin_suggestions").update({ active: !row.active }).eq("id", row.id);
+    fetchItems();
+  };
+
+  const removeItem = async (row) => {
+    if (!window.confirm("Delete this suggestion?")) return;
+    await supabase.from("admin_suggestions").delete().eq("id", row.id);
+    fetchItems();
+  };
+
+  return (
+    <div style={{padding:28,maxWidth:1150}}>
+      {toast&&<Toast message={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>} 
+      <h2 style={{fontWeight:800,fontSize:24,marginBottom:6}}>Manual Suggestions</h2>
+      <p style={{color:"#6A8CAC",fontSize:13,marginBottom:20}}>Add affiliate books, promotions, and custom preparation tips for AI Analysis.</p>
+
+      <div className="card" style={{marginBottom:16}}>
+        <div style={{fontWeight:700,fontSize:15,marginBottom:12}}>Add New Suggestion</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:10}}>
+          <div><label style={L}>TITLE</label><input className="input" value={form.title} onChange={e=>updateField("title", e.target.value)} placeholder="e.g. Quant Formula Book"/></div>
+          <div><label style={L}>TYPE</label><select className="select" value={form.type} onChange={e=>updateField("type", e.target.value)}><option>Book</option><option>Course</option><option>Tip</option><option>Promotion</option></select></div>
+          <div><label style={L}>EXAM</label><select className="select" value={form.exam} onChange={e=>updateField("exam", e.target.value)}><option>All</option><option>SSC</option><option>Banking</option><option>UPSC</option><option>JEE</option><option>RRB</option></select></div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:10}}>
+          <div><label style={L}>WEAK TOPIC (OPTIONAL)</label><input className="input" value={form.weak_topic} onChange={e=>updateField("weak_topic", e.target.value)} placeholder="e.g. Algebra"/></div>
+          <div><label style={L}>AFFILIATE URL (OPTIONAL)</label><input className="input" value={form.affiliate_url} onChange={e=>updateField("affiliate_url", e.target.value)} placeholder="https://..."/></div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 130px 140px",gap:12}}>
+          <div><label style={L}>MESSAGE</label><textarea className="input" rows={3} value={form.message} onChange={e=>updateField("message", e.target.value)} placeholder="Why this is useful for the student..." style={{resize:"vertical"}}/></div>
+          <div><label style={L}>PRIORITY</label><input className="input" type="number" min={1} max={10} value={form.priority} onChange={e=>updateField("priority", e.target.value)}/></div>
+          <div>
+            <label style={L}>STATUS</label>
+            <button className="btn btn-ghost" style={{width:"100%",height:44}} onClick={()=>updateField("active", !form.active)}>{form.active ? "Active" : "Inactive"}</button>
+          </div>
+        </div>
+        <div style={{marginTop:14}}><button className="btn btn-success" onClick={saveSuggestion} disabled={saving}>{saving ? "Saving..." : "Save Suggestion"}</button></div>
+      </div>
+
+      {error && <div style={{background:"#F8717122",border:"1px solid #F8717144",borderRadius:10,padding:"10px 14px",color:"#F87171",fontSize:13,marginBottom:12}}>{error}</div>}
+
+      {loading ? <Loading/> : (
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 70px 90px 100px 1fr 90px 140px",gap:12,padding:"8px 16px",fontSize:10,color:"#253A52",fontWeight:700,letterSpacing:1.2}}>
+            <span>TITLE</span><span>TYPE</span><span>EXAM</span><span>TOPIC</span><span>URL</span><span>STATUS</span><span>ACTIONS</span>
+          </div>
+          {items.map((row)=>(
+            <div key={row.id} className="tbl-row" style={{gridTemplateColumns:"1fr 70px 90px 100px 1fr 90px 140px"}}>
+              <div><div style={{fontWeight:700,fontSize:13}}>{row.title}</div><div style={{fontSize:11,color:"#6A8CAC"}}>{row.message?.slice(0,70)}</div></div>
+              <Tag color="#38BDF8">{row.type||"Tip"}</Tag>
+              <Tag color="#E8B84B">{row.exam||"All"}</Tag>
+              <Tag color="#6A8CAC">{row.weak_topic||"All"}</Tag>
+              <div style={{fontSize:12,color:"#6A8CAC",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.affiliate_url||"-"}</div>
+              <Tag color={row.active ? "#34D399" : "#6A8CAC"}>{row.active ? "active" : "inactive"}</Tag>
+              <div style={{display:"flex",gap:6}}>
+                <button className="btn btn-ghost" style={{padding:"5px 10px",fontSize:11}} onClick={()=>toggleActive(row)}>{row.active ? "Disable" : "Enable"}</button>
+                <button className="btn btn-danger" style={{padding:"5px 10px",fontSize:11}} onClick={()=>removeItem(row)}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 function DashboardHome({setPage}){
   const[stats,setStats]=useState({questions:0,users:0,tests:0,attempts:0});
   useEffect(()=>{
@@ -753,6 +884,7 @@ export default function AdminPanel() {
     {id:"tests",     icon:"📋", label:"Tests"},
     {id:"users",     icon:"👥", label:"Users"},
     {id:"attempts",  icon:"📊", label:"Attempts"},
+    {id:"suggestions", icon:"📌", label:"Suggestions"},
     {id:"ai",        icon:"🤖", label:"AI Generator"},
   ];
 
@@ -788,6 +920,7 @@ export default function AdminPanel() {
           {page==="tests"     && <TestsPage/>}
           {page==="users"     && <UsersPage/>}
           {page==="attempts"  && <AttemptsPage/>}
+          {page==="suggestions" && <SuggestionsPage/>}
           {page==="ai"        && <AIGeneratorPage/>}
         </div>
       </div>
