@@ -485,9 +485,16 @@ Return plain text with sections:
 4) Book Suggestions (performance-based and admin presets where relevant)
 5) Practical Preparation Tips`;
 
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        if (!accessToken) throw new Error("Login required");
+
         const aiResponse = await fetch("/api/generate", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + accessToken
+          },
           body: JSON.stringify({ prompt })
         });
 

@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
-// ── ADMIN CREDENTIALS ─────────────────────────────────────────────────────────
-const ADMIN_EMAIL    = "Himanshu.mzn2019@gmail.com";
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
-
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap');
@@ -67,41 +63,6 @@ function Tag({children,color}){return<span className="tag" style={{background:co
 function Mono({children,color="#38BDF8",size=13}){return<span style={{fontFamily:"'Fira Code',monospace",fontSize:size,color,fontWeight:500}}>{children}</span>;}
 function Loading(){return(<div style={{textAlign:"center",padding:60}}><div style={{width:36,height:36,border:"2px solid #152236",borderTopColor:"#38BDF8",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 16px"}}/><div style={{color:"#6A8CAC",fontSize:13}}>Loading...</div></div>);}
 
-// ── PASSWORD SCREEN ───────────────────────────────────────────────────────────
-function PasswordScreen({onUnlock}){
-  const[pass,setPass]=useState("");
-  const[error,setError]=useState("");
-  const[show,setShow]=useState(false);
-  const check=()=>{
-    if(pass===ADMIN_PASSWORD){sessionStorage.setItem("admin_unlocked","true");onUnlock();}
-    else{setError("Wrong password! Try again.");setPass("");}
-  };
-  return(
-    <>
-      <style>{CSS}</style>
-      <div style={{minHeight:"100vh",background:"#020408",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-        <div style={{background:"#080C18",border:"1px solid #152236",borderRadius:24,padding:44,width:"100%",maxWidth:420,textAlign:"center"}}>
-          <div style={{fontSize:56,marginBottom:16}}>🔐</div>
-          <div style={{fontWeight:800,fontSize:24,marginBottom:8}}>Admin Panel</div>
-          <div style={{color:"#6A8CAC",fontSize:14,marginBottom:32}}>mockies.in — Restricted Access</div>
-          {error&&<div style={{background:"#F8717122",border:"1px solid #F8717144",borderRadius:10,padding:"10px 14px",color:"#F87171",fontSize:13,marginBottom:16}}>{error}</div>}
-          <div style={{position:"relative",marginBottom:16}}>
-            <input type={show?"text":"password"} placeholder="Enter admin password" value={pass}
-              onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&check()}
-              style={{width:"100%",background:"#020408",border:"1.5px solid #0E1A2C",borderRadius:10,padding:"13px 48px 13px 16px",color:"#EEF2FF",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:14,outline:"none"}}/>
-            <button onClick={()=>setShow(!show)} style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#6A8CAC",cursor:"pointer",fontSize:16}}>{show?"🙈":"👁"}</button>
-          </div>
-          <button onClick={check} style={{width:"100%",padding:14,background:"linear-gradient(135deg,#38BDF8,#0EA5E9)",border:"none",borderRadius:12,color:"#020408",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:10}}>
-            Unlock Admin Panel →
-          </button>
-          <button onClick={()=>window.location.href="/"} style={{width:"100%",padding:12,background:"transparent",border:"1px solid #152236",borderRadius:12,color:"#6A8CAC",fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:14,fontWeight:600,cursor:"pointer"}}>
-            ← Back to Site
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // ── QUESTION MODAL ────────────────────────────────────────────────────────────
 function QuestionModal({question,onClose,onSaved}){
@@ -401,10 +362,19 @@ function AIGeneratorPage(){
         setLoading(true);setError("");setMessage("");setQuestions([]);
     const prompt=`Generate exactly ${count} multiple choice questions for ${exam} exam.\nSubject: ${subject}, Topic: ${topic}, Difficulty: ${difficulty}\nReturn ONLY a valid JSON array, no extra text:\n[{"question":"text","options":["A","B","C","D"],"correct_answer":0,"explanation":"why"}]\ncorrect_answer is 0-3 index.`;
     try{
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError("Login required. Please sign in again.");
+        setLoading(false);
+        return;
+      }
       const res=await fetch("/api/generate",{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({prompt})
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":"Bearer " + session.access_token
+        },
+        body:JSON.stringify({prompt, scope:"admin"})
       });
       const data=await res.json();
       if(!res.ok){setError(data.error||"Failed to generate questions");setLoading(false);return;}
@@ -858,13 +828,36 @@ function DashboardHome({setPage}){
 // ── ROOT APP ──────────────────────────────────────────────────────────────────
 export default function AdminPanel() {
   const [page, setPage]       = useState("dashboard");
-  const [unlocked, setUnlocked] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [allowed, setAllowed] = useState(false);
+  const [accessError, setAccessError] = useState("");
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("admin_unlocked");
-    if (saved === "true") setUnlocked(true);
-    setChecking(false);
+    const verifyAdmin = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        window.location.href = "/login";
+        return;
+      }
+      try {
+        const response = await fetch("/api/admin-check", {
+          method: "GET",
+          headers: { Authorization: "Bearer " + session.access_token }
+        });
+        if (!response.ok) {
+          setAllowed(false);
+          setAccessError("Access denied. Admin role required.");
+        } else {
+          setAllowed(true);
+        }
+      } catch {
+        setAllowed(false);
+        setAccessError("Unable to verify admin access.");
+      } finally {
+        setChecking(false);
+      }
+    };
+    verifyAdmin();
   }, []);
 
   if (checking) return (
@@ -876,7 +869,18 @@ export default function AdminPanel() {
     </>
   );
 
-  if (!unlocked) return <PasswordScreen onUnlock={() => setUnlocked(true)} />;
+  if (!allowed) return (
+    <>
+      <style>{CSS}</style>
+      <div style={{minHeight:"100vh",background:"#020408",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+        <div style={{background:"#080C18",border:"1px solid #152236",borderRadius:16,padding:24,maxWidth:520,width:"100%"}}>
+          <div style={{fontWeight:800,fontSize:22,marginBottom:8}}>Admin Access Blocked</div>
+          <div style={{color:"#6A8CAC",fontSize:14,marginBottom:14}}>{accessError || "You are not authorized to open admin panel."}</div>
+          <button className="btn btn-ghost" onClick={()=>window.location.href="/dashboard"}>Go to Dashboard</button>
+        </div>
+      </div>
+    </>
+  );
 
   const nav = [
     {id:"dashboard", icon:"⊞", label:"Dashboard"},
@@ -910,8 +914,8 @@ export default function AdminPanel() {
             ))}
           </nav>
           <div style={{borderTop:"1px solid #0E1A2C",paddingTop:14,display:"flex",flexDirection:"column",gap:8}}>
-            <button className="btn btn-ghost" style={{width:"100%",justifyContent:"center",fontSize:12}} onClick={()=>window.location.href="/"}>🏠 View Site</button>
-            <button className="btn btn-danger" style={{width:"100%",justifyContent:"center",fontSize:12}} onClick={()=>{sessionStorage.removeItem("admin_unlocked");setUnlocked(false);}}>🔒 Lock Panel</button>
+            <button className="btn btn-ghost" style={{width:"100%",justifyContent:"center",fontSize:12}} onClick={()=>window.location.href="/"}>View Site</button>
+            <button className="btn btn-danger" style={{width:"100%",justifyContent:"center",fontSize:12}} onClick={async()=>{await supabase.auth.signOut();window.location.href="/login";}}>Sign Out</button>
           </div>
         </aside>
         <div style={{flex:1,overflowY:"auto"}} key={page} className="fade-in">

@@ -65,6 +65,8 @@ export default function DailyQuiz() {
         return;
       }
       setUser(currentUser);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
 
       const { data: attemptData, error: attemptError } = await supabase
         .from("daily_quiz_attempts")
@@ -102,7 +104,10 @@ export default function DailyQuiz() {
         try {
           const response = await fetch("/api/generate", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + accessToken
+            },
             body: JSON.stringify({ prompt })
           });
           const payload = await response.json();
