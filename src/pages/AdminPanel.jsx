@@ -390,8 +390,7 @@ function AIGeneratorPage(){
   const[topic,setTopic]=useState("");
   const[difficulty,setDifficulty]=useState("Medium");
   const[count,setCount]=useState(5);
-  const[apiKey,setApiKey]=useState("");
-  const[loading,setLoading]=useState(false);
+    const[loading,setLoading]=useState(false);
   const[saving,setSaving]=useState(false);
   const[questions,setQuestions]=useState([]);
   const[message,setMessage]=useState("");
@@ -399,18 +398,17 @@ function AIGeneratorPage(){
 
   const generate=async()=>{
     if(!topic){setError("Please enter a topic");return;}
-    if(!apiKey){setError("Please enter your Groq API key");return;}
-    setLoading(true);setError("");setMessage("");setQuestions([]);
+        setLoading(true);setError("");setMessage("");setQuestions([]);
     const prompt=`Generate exactly ${count} multiple choice questions for ${exam} exam.\nSubject: ${subject}, Topic: ${topic}, Difficulty: ${difficulty}\nReturn ONLY a valid JSON array, no extra text:\n[{"question":"text","options":["A","B","C","D"],"correct_answer":0,"explanation":"why"}]\ncorrect_answer is 0-3 index.`;
     try{
-      const res=await fetch("https://api.groq.com/openai/v1/chat/completions",{
+      const res=await fetch("/api/generate",{
         method:"POST",
-        headers:{"Content-Type":"application/json","Authorization":"Bearer "+apiKey},
-        body:JSON.stringify({model:"llama-3.3-70b-versatile",messages:[{role:"user",content:prompt}],temperature:0.7})
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({prompt})
       });
       const data=await res.json();
-      if(!data.choices){setError("Groq API Error: "+(data.error?.message||"Check your API key"));setLoading(false);return;}
-      const text=data.choices[0].message.content;
+      if(!res.ok){setError(data.error||"Failed to generate questions");setLoading(false);return;}
+      const text=data.content;
       const clean=text.replace(/```json|```/g,"").trim();
       const parsed=JSON.parse(clean);
       setQuestions(parsed.map(q=>({...q,exam,subject,topic,difficulty})));
@@ -432,14 +430,8 @@ function AIGeneratorPage(){
   return(
     <div style={{padding:28,maxWidth:900}}>
       <h2 style={{fontWeight:800,fontSize:24,marginBottom:6}}>🤖 AI Question Generator</h2>
-      <p style={{color:"#6A8CAC",fontSize:13,marginBottom:24}}>Generate questions using Groq AI — fast and free!</p>
-      <div className="card" style={{marginBottom:20}}>
-        <div style={{marginBottom:16}}>
-          <label style={L}>GROQ API KEY</label>
-          <input className="input" type="password" placeholder="Paste your Groq API key (gsk_...)" value={apiKey} onChange={e=>setApiKey(e.target.value)}/>
-          <div style={{fontSize:11,color:"#6A8CAC",marginTop:6}}>Get free key at: console.groq.com → API Keys</div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+      <p style={{color:"#6A8CAC",fontSize:13,marginBottom:24}}>Generate questions securely via server API.</p>
+      <div className="card" style={{marginBottom:20}}>        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
           <div><label style={L}>EXAM</label><select className="select" value={exam} onChange={e=>{setExam(e.target.value);setSubject(SUBJECTS[e.target.value][0]);}}>{EXAMS.map(e=><option key={e}>{e}</option>)}</select></div>
           <div><label style={L}>SUBJECT</label><select className="select" value={subject} onChange={e=>setSubject(e.target.value)}>{SUBJECTS[exam].map(s=><option key={s}>{s}</option>)}</select></div>
         </div>
