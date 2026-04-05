@@ -429,7 +429,6 @@ function TestsPage({ tests, selectedCategory, setSelectedCategory }) {
 function AIAnalysisPage({ user, profile, attempts }) {
   const [loading, setLoading] = useState(true);
   const [analysisText, setAnalysisText] = useState("");
-  const [manualSuggestions, setManualSuggestions] = useState([]);
   const [error, setError] = useState("");
 
   const examPerformance = useMemo(() => (
@@ -466,40 +465,58 @@ function AIAnalysisPage({ user, profile, attempts }) {
         .order("priority", { ascending: false })
         .limit(8);
 
-      const prompt = `You are a competitive exam mentor for Indian students.
+      try {
+        const { data: suggestions } = await suggestionReq;
+        const presetSuggestions = (suggestions || []).map((s) => (
+          `- ${s.title}: ${s.message}${s.affiliate_url ? ` (Link: ${s.affiliate_url})` : ""}`
+        )).join("\n");
+
+        const prompt = `You are a competitive exam mentor for Indian students.
 Student: ${profile?.full_name || user?.email || "Student"}
 Target Exam: ${profileExam}
 Total Attempts: ${attempts.length}
 Weak Areas: ${weakAreas.map((w) => `${w.exam} (${w.avgAccuracy}%)`).join(", ") || "No attempts yet"}
-Top request: give concise personalized plan.
+Use these admin preset recommendations only when relevant:
+${presetSuggestions || "- No admin preset suggestion available"}
 Return plain text with sections:
 1) Performance Summary
 2) Weak Areas and Why
 3) 14-Day Roadmap
-4) Book Suggestions
+4) Book Suggestions (performance-based and admin presets where relevant)
 5) Practical Preparation Tips`;
 
-      try {
-        const [{ data: suggestions, error: suggestionsError }, aiResponse] = await Promise.all([
-          suggestionReq,
-          fetch("/api/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt })
-          })
-        ]);
-
-        if (suggestionsError) {
-          setManualSuggestions([]);
-        } else {
-          setManualSuggestions(suggestions || []);
-        }
+        const aiResponse = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt })
+        });
 
         const aiData = await aiResponse.json();
         if (!aiResponse.ok) throw new Error(aiData.error || "Unable to generate AI analysis");
         setAnalysisText(aiData.content || "");
       } catch (e) {
-        setError(e.message);
+        const fallback = `1) Performance Summary
+You have attempted ${attempts.length} test(s) for ${profileExam}.
+
+2) Weak Areas and Why
+${weakAreas.length ? weakAreas.map((w, i) => `${i + 1}. ${w.exam} - ${w.avgAccuracy}% accuracy`).join("\n") : "No weak areas yet. Attempt more tests for personalized analysis."}
+
+3) 14-Day Roadmap
+- Day 1-4: Focus on weakest topic and solve 30-40 mixed questions daily.
+- Day 5-8: Add timed sectional tests and revise mistakes.
+- Day 9-12: Attempt full-length mocks and track accuracy.
+- Day 13-14: Rapid revision and previous-year questions.
+
+4) Book Suggestions
+- Pick one standard concept book for your target exam.
+- Add one objective practice book for weak topics.
+
+5) Practical Preparation Tips
+- Maintain an error notebook.
+- Analyze each test after submission.
+- Prioritize accuracy first, then speed.`;
+        setAnalysisText(fallback);
+        setError("AI analysis is temporarily unavailable. Showing performance summary.");
       } finally {
         setLoading(false);
       }
@@ -543,31 +560,12 @@ Return plain text with sections:
         <div style={{ fontWeight: 700, marginBottom: 10 }}>AI Performance Report</div>
         {loading ? (
           <div style={{ color: "#7090B0", fontSize: 13 }}>Generating analysis...</div>
-        ) : error ? (
-          <div style={{ color: "#F87171", fontSize: 13 }}>{error}</div>
         ) : (
+          <>
+            {error && <div style={{ color: "#E8B84B", fontSize: 12, marginBottom: 8 }}>{error}</div>}
           <pre style={{ whiteSpace: "pre-wrap", fontFamily: "Outfit, sans-serif", lineHeight: 1.7, color: "#CFE2FF", fontSize: 14 }}>{analysisText}</pre>
+          </>
         )}
-      </div>
-
-      <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 10 }}>Admin Recommendations and Book Suggestions</div>
-        {manualSuggestions.length === 0 ? (
-          <div style={{ color: "#7090B0", fontSize: 13 }}>No manual suggestions configured by admin yet.</div>
-        ) : manualSuggestions.map((suggestion) => (
-          <div key={suggestion.id} style={{ border: "1px solid #0F1C2E", borderRadius: 10, padding: "12px 14px", marginBottom: 10, background: "#06090F" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
-              <div style={{ fontWeight: 700 }}>{suggestion.title}</div>
-              <Tag color="#E8B84B">{suggestion.type || "Tip"}</Tag>
-            </div>
-            <div style={{ color: "#7090B0", fontSize: 13, lineHeight: 1.6 }}>{suggestion.message}</div>
-            {suggestion.affiliate_url && (
-              <a href={suggestion.affiliate_url} target="_blank" rel="noreferrer" style={{ color: "#38BDF8", fontSize: 13, display: "inline-block", marginTop: 8 }}>
-                Open Recommendation
-              </a>
-            )}
-          </div>
-        ))}
       </div>
     </div>
   );
