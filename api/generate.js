@@ -1,4 +1,4 @@
-import { checkRateLimit, detectBotRisk, getAuthedUser, getIp, isAdminUser, setSecurityHeaders, writeAuditLog } from "./_security.js";
+import { checkRateLimit, detectBotRisk, getAuthedUser, getIp, isAdminFromDb, isAdminUser, setSecurityHeaders, writeAuditLog } from "./_security.js";
 
 export default async function handler(req, res) {
   setSecurityHeaders(res);
@@ -19,7 +19,8 @@ export default async function handler(req, res) {
   if (!prompt || typeof prompt !== "string") return res.status(400).json({ error: "Prompt required" });
   if (prompt.length > 6000) return res.status(400).json({ error: "Prompt too long" });
 
-  if (scope === "admin" && !isAdminUser(user)) {
+  const isAdmin = isAdminUser(user) || await isAdminFromDb(user);
+  if (scope === "admin" && !isAdmin) {
     await writeAuditLog({ userId: user.id, email: user.email, action: "ai_generate_admin_scope", status: "denied", details: "admin scope denied", ip: getIp(req) });
     return res.status(403).json({ error: "Admin access required" });
   }

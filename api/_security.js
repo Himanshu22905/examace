@@ -49,6 +49,35 @@ export function isAdminUser(user) {
   return claimAdmin || isAdminEmail(user.email);
 }
 
+export async function isAdminFromDb(user) {
+  if (!user) return false;
+  const { url, serviceRole } = getServiceRoleConfig();
+  if (!serviceRole) return false;
+
+  try {
+    const filters = [];
+    if (user.id) filters.push(`user_id.eq.${user.id}`);
+    if (user.email) filters.push(`email.eq.${encodeURIComponent(String(user.email).toLowerCase())}`);
+    if (filters.length === 0) return false;
+
+    const response = await fetch(
+      `${url}/rest/v1/admin_users?select=id&or=(${filters.join(",")})&limit=1`,
+      {
+        headers: {
+          apikey: serviceRole,
+          Authorization: `Bearer ${serviceRole}`
+        }
+      }
+    );
+
+    if (!response.ok) return false;
+    const rows = await response.json();
+    return Array.isArray(rows) && rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function getAuthedUser(req) {
   const auth = req.headers.authorization || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
