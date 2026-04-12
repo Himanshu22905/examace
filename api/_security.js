@@ -49,19 +49,24 @@ export function isAdminUser(user) {
   return claimAdmin || isAdminEmail(user.email);
 }
 
-export async function isAdminFromDb(user) {
-  if (!user) return false;
+export async function getAdminAccess(user) {
+  if (!user) return { ok: false, role: null, source: "none" };
+  if (isAdminUser(user)) {
+    const isSuper = String(user.email || "").toLowerCase() === String(process.env.SUPER_ADMIN_EMAIL || "").toLowerCase();
+    return { ok: true, role: isSuper ? "super_admin" : "admin", source: "claims" };
+  }
+
   const { url, serviceRole } = getServiceRoleConfig();
-  if (!serviceRole) return false;
+  if (!serviceRole) return { ok: false, role: null, source: "db" };
 
   try {
     const filters = [];
     if (user.id) filters.push(`user_id.eq.${user.id}`);
     if (user.email) filters.push(`email.eq.${encodeURIComponent(String(user.email).toLowerCase())}`);
-    if (filters.length === 0) return false;
+    if (filters.length === 0) return { ok: false, role: null, source: "db" };
 
-    const response = await fetch(
-      `${url}/rest/v1/admin_users?select=id&or=(${filters.join(",")})&limit=1`,
+    let response = await fetch(
+      `${url}/rest/v1/admin_users?select=id,role,is_active&or=(${filters.join(",")})&is_active=eq.true&limit=1`,
       {
         headers: {
           apikey: serviceRole,
@@ -70,12 +75,31 @@ export async function isAdminFromDb(user) {
       }
     );
 
-    if (!response.ok) return false;
+    if (!response.ok) {
+      response = await fetch(
+        `${url}/rest/v1/admin_users?select=id&or=(${filters.join(",")})&limit=1`,
+        {
+          headers: {
+            apikey: serviceRole,
+            Authorization: `Bearer ${serviceRole}`
+          }
+        }
+      );
+    }
+    if (!response.ok) return { ok: false, role: null, source: "db" };
     const rows = await response.json();
-    return Array.isArray(rows) && rows.length > 0;
+    if (!Array.isArray(rows) || rows.length === 0) return { ok: false, role: null, source: "db" };
+
+    const role = String(rows[0].role || "admin").toLowerCase();
+    return { ok: true, role: role === "super_admin" ? "super_admin" : "admin", source: "db" };
   } catch {
-    return false;
+    return { ok: false, role: null, source: "db" };
   }
+}
+
+export async function isAdminFromDb(user) {
+  const access = await getAdminAccess(user);
+  return access.ok;
 }
 
 export async function getAuthedUser(req) {

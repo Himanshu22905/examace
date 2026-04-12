@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 
 const CSS = `
@@ -89,6 +89,21 @@ function Toast({ message, type, onDone }) {
       <span style={{ fontSize:14, fontWeight:600 }}>{message}</span>
     </div>
   );
+}
+
+function CategoryLogo({ name, logo, color = "#7090B0", size = 20 }) {
+  const [hasError, setHasError] = useState(false);
+  const initials = String(name || "?").slice(0, 2).toUpperCase();
+
+  if (!logo || hasError) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: "50%", background: color + "22", border: `1px solid ${color}44`, display: "grid", placeItems: "center", fontSize: Math.max(9, size / 2.2), fontWeight: 800, color }}>
+        {initials}
+      </div>
+    );
+  }
+
+  return <img src={logo} alt={name + " logo"} onError={() => setHasError(true)} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }} />;
 }
 
 // ── PROFILE PAGE ──────────────────────────────────────────────────────────────
@@ -274,32 +289,32 @@ function HistoryPage({ attempts }) {
 // ── TESTS PAGE ────────────────────────────────────────────────────────────────
 const TEST_CATEGORY_META = {
   SSC: {
-    logo: "https://www.google.com/s2/favicons?domain=ssc.nic.in&sz=128",
+    logo: "https://ssc.nic.in/Content/img/newLogo.png",
     color: "#E8B84B",
     subtitle: "Staff Selection Commission"
   },
   Banking: {
-    logo: "https://www.google.com/s2/favicons?domain=ibps.in&sz=128",
+    logo: "https://www.ibps.in/wp-content/themes/ibps/images/logo.png",
     color: "#34D399",
     subtitle: "Bank PO and Clerk Exams"
   },
   UPSC: {
-    logo: "https://www.google.com/s2/favicons?domain=upsc.gov.in&sz=128",
+    logo: "https://www.upsc.gov.in/sites/default/files/logo.png",
     color: "#38BDF8",
     subtitle: "Civil Services and Government Exams"
   },
   JEE: {
-    logo: "https://www.google.com/s2/favicons?domain=nta.ac.in&sz=128",
+    logo: "https://www.nta.ac.in/img/placeholder-logo.png",
     color: "#A78BFA",
     subtitle: "Engineering Entrance Exams"
   },
   RRB: {
-    logo: "https://www.google.com/s2/favicons?domain=rrbcdg.gov.in&sz=128",
+    logo: "https://www.rrbcdg.gov.in/images/logo.png",
     color: "#FB923C",
     subtitle: "Railway Recruitment Exams"
   },
   Other: {
-    logo: "https://www.google.com/s2/favicons?domain=mockies.in&sz=128",
+    logo: "",
     color: "#7090B0",
     subtitle: "Other Competitive Exams"
   }
@@ -367,7 +382,7 @@ function TestsPage({ tests, selectedCategory, setSelectedCategory }) {
                 gap: 6
               }}
             >
-              {category !== "All" && <img src={meta.logo} alt={category} style={{ width: 14, height: 14, borderRadius: "50%" }} />}
+              {category !== "All" && <CategoryLogo name={category} logo={meta.logo} color={meta.color} size={14} />}
               {category}
             </button>
           );
@@ -389,12 +404,7 @@ function TestsPage({ tests, selectedCategory, setSelectedCategory }) {
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:12 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                   <div style={{ width:42, height:42, borderRadius:12, background:meta.color+"1A", border:`1px solid ${meta.color}44`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <img
-                      src={meta.logo}
-                      alt={category + " logo"}
-                      style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }}
-                      onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    />
+                    <CategoryLogo name={category} logo={meta.logo} color={meta.color} size={24} />
                   </div>
                   <div>
                     <div style={{ fontWeight:800, fontSize:16, color:meta.color }}>{category}</div>
@@ -411,11 +421,105 @@ function TestsPage({ tests, selectedCategory, setSelectedCategory }) {
                     <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                       <Tag color={meta.color}>{t.exam || category}</Tag>
                       <Tag color="#38BDF8">{t.type}</Tag>
-                      <Tag color="#7090B0">Time {t.time_limit}m</Tag>
-                      <Tag color="#7090B0">Questions {getQuestionCount(t.question_ids)}</Tag>
+                      <Tag color="#7090B0">{t.time_limit} min</Tag>
+                      <Tag color="#7090B0">{getQuestionCount(t.question_ids)} Qs</Tag>
                     </div>
                   </div>
                   <button className="btn btn-gold" style={{ flexShrink:0, marginLeft:16, padding:"10px 20px" }} onClick={()=>window.location.href="/test"}>Start</button>
+                </div>
+              ))}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function StudyMaterialPage({ materials, selectedCategory, setSelectedCategory }) {
+  const grouped = useMemo(() => {
+    return materials.reduce((acc, row) => {
+      const category = row.category_name || row.category || getTestCategory(row.exam || "Other");
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(row);
+      return acc;
+    }, {});
+  }, [materials]);
+
+  const visibleCategories = Object.keys(grouped);
+  const displayCategories =
+    selectedCategory === "All"
+      ? visibleCategories
+      : visibleCategories.filter((category) => category === selectedCategory);
+
+  return (
+    <div style={{ padding: "20px 16px", maxWidth: 980 }}>
+      <h2 style={{ fontWeight: 800, fontSize: 20, marginBottom: 4 }}>Study Material PDFs</h2>
+      <p style={{ color: "#7090B0", fontSize: 13, marginBottom: 14 }}>{materials.length} pdf files available</p>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+        {["All", ...visibleCategories].map((category) => {
+          const active = selectedCategory === category;
+          const meta = TEST_CATEGORY_META[category] || TEST_CATEGORY_META.Other;
+          return (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              style={{
+                border: active ? `1px solid ${meta.color}66` : "1px solid #0F1C2E",
+                background: active ? `${meta.color}1A` : "#06090F",
+                color: active ? meta.color : "#7090B0",
+                borderRadius: 999,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6
+              }}
+            >
+              {category !== "All" && <CategoryLogo name={category} logo={meta.logo} color={meta.color} size={14} />}
+              {category}
+            </button>
+          );
+        })}
+      </div>
+
+      {materials.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 20px", background: "#090E18", borderRadius: 20, border: "1px solid #0F1C2E" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>No study material yet</div>
+          <div style={{ color: "#7090B0", fontSize: 13 }}>Super admin can add category-wise PDFs from admin panel.</div>
+        </div>
+      ) : (
+        displayCategories.map((category) => {
+          const list = grouped[category] || [];
+          const meta = TEST_CATEGORY_META[category] || TEST_CATEGORY_META.Other;
+          return (
+            <div key={category} className="card" style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <CategoryLogo name={category} logo={meta.logo} color={meta.color} size={20} />
+                  <div style={{ fontWeight: 800, color: meta.color }}>{category}</div>
+                </div>
+                <Tag color={meta.color}>{list.length} file{list.length > 1 ? "s" : ""}</Tag>
+              </div>
+
+              {list.map((item) => (
+                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "12px 10px", border: "1px solid #0F1C2E", borderRadius: 10, marginBottom: 8, background: "#06090F", flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 260 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{item.title || "Study Material"}</div>
+                    <div style={{ color: "#7090B0", fontSize: 12 }}>{item.description || "Category wise preparation file"}</div>
+                    <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Tag color={meta.color}>{category}</Tag>
+                      <Tag color="#38BDF8">{item.language || "English"}</Tag>
+                    </div>
+                  </div>
+                  {item.pdf_url ? (
+                    <a className="btn btn-gold" href={item.pdf_url} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>Download PDF</a>
+                  ) : (
+                    <button className="btn btn-ghost" disabled>No file</button>
+                  )}
                 </div>
               ))}
             </div>
@@ -656,9 +760,11 @@ export default function Dashboard() {
   const [profile, setProfile] = useState(null);
   const [attempts, setAttempts] = useState([]);
   const [tests, setTests] = useState([]);
+  const [studyMaterials, setStudyMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState("home");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedMaterialCategory, setSelectedMaterialCategory] = useState("All");
 
   useEffect(() => {
     const init = async () => {
@@ -678,6 +784,13 @@ export default function Dashboard() {
 
       const { data: t } = await supabase.from("tests").select("*").eq("status", "published");
       setTests(t || []);
+
+      const { data: materials } = await supabase
+        .from("study_materials")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+      setStudyMaterials(materials || []);
       setLoading(false);
     };
     init();
@@ -704,6 +817,7 @@ export default function Dashboard() {
   const nav = [
     { id: "home", icon: "DB", label: "Dashboard" },
     { id: "tests", icon: "TS", label: "Tests" },
+    { id: "materials", icon: "PDF", label: "Study Material" },
     { id: "analysis", icon: "AI", label: "AI Analysis" },
     { id: "history", icon: "RS", label: "Results" },
     { id: "profile", icon: "PF", label: "Profile" }
@@ -715,6 +829,8 @@ export default function Dashboard() {
         return <HomePage profile={profile} attempts={attempts} tests={tests} firstName={firstName} setPage={setPage} />;
       case "tests":
         return <TestsPage tests={tests} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} />;
+      case "materials":
+        return <StudyMaterialPage materials={studyMaterials} selectedCategory={selectedMaterialCategory} setSelectedCategory={setSelectedMaterialCategory} />;
       case "analysis":
         return <AIAnalysisPage user={user} profile={profile} attempts={attempts} />;
       case "history":
@@ -765,7 +881,7 @@ export default function Dashboard() {
                             gap: 6
                           }}
                         >
-                          {category !== "All" && <img src={meta.logo} alt={category} style={{ width: 12, height: 12, borderRadius: "50%" }} />}
+                          {category !== "All" && <CategoryLogo name={category} logo={meta.logo} color={meta.color} size={12} />}
                           {category}
                         </button>
                       );

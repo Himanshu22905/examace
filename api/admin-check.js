@@ -1,4 +1,4 @@
-import { checkRateLimit, detectBotRisk, getAuthedUser, getIp, isAdminFromDb, isAdminUser, setSecurityHeaders, writeAuditLog } from "./_security.js";
+import { checkRateLimit, detectBotRisk, getAdminAccess, getAuthedUser, getIp, setSecurityHeaders, writeAuditLog } from "./_security.js";
 
 export default async function handler(req, res) {
   setSecurityHeaders(res);
@@ -14,13 +14,13 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: error || "Unauthorized" });
   }
 
-  const admin = isAdminUser(user) || await isAdminFromDb(user);
-  if (!admin) {
+  const access = await getAdminAccess(user);
+  if (!access.ok) {
     await writeAuditLog({ userId: user.id, email: user.email, action: "admin_check", status: "denied", details: "not admin", ip: getIp(req) });
     return res.status(403).json({ error: "Admin access denied" });
   }
 
-  await writeAuditLog({ userId: user.id, email: user.email, action: "admin_check", status: "ok", ip: getIp(req) });
+  await writeAuditLog({ userId: user.id, email: user.email, action: "admin_check", status: "ok", details: access.role, ip: getIp(req) });
 
-  return res.status(200).json({ ok: true, email: user.email });
+  return res.status(200).json({ ok: true, email: user.email, role: access.role, isSuperAdmin: access.role === "super_admin" });
 }

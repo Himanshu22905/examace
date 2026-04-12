@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LandingPage from './pages/LandingPage'
 import AuthSystem from './pages/AuthSystem'
 import Dashboard from './pages/Dashboard'
@@ -15,7 +15,8 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/test"      element={<MockTestInterface />} />
         <Route path="/daily-quiz" element={<DailyQuiz />} />
-        <Route path="/admin"     element={<AdminPanel />} />
+        <Route path="/admin" element={<Navigate to="/super-admin" replace />} />
+        <Route path="/super-admin" element={<AdminPanel />} />
         <Route path="/admin-direct" element={<AdminPanel allowPasswordFallback={true} />} />
       </Routes>
     </BrowserRouter>

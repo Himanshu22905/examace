@@ -146,19 +146,53 @@ function BulkUploadModal({onClose,onSaved}){
   const fileRef=useRef();
   const sample=`question_text,option_a,option_b,option_c,option_d,correct_answer,topic,difficulty,explanation\nWhat is 25% of 200?,25,50,75,100,B,Percentage,Easy,25% of 200 = 50`;
   const downloadSample=()=>{const b=new Blob([sample],{type:"text/csv"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="sample.csv";a.click();};
+  const parseCsvRows = (text) => {
+    const rows = [];
+    let current = [];
+    let value = "";
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const next = text[i + 1];
+      if (char === "\"") {
+        if (inQuotes && next === "\"") {
+          value += "\"";
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        current.push(value);
+        value = "";
+      } else if ((char === "\n" || char === "\r") && !inQuotes) {
+        if (char === "\r" && next === "\n") i++;
+        current.push(value);
+        if (current.some((cell) => String(cell).trim() !== "")) rows.push(current);
+        current = [];
+        value = "";
+      } else {
+        value += char;
+      }
+    }
+    current.push(value);
+    if (current.some((cell) => String(cell).trim() !== "")) rows.push(current);
+    return rows;
+  };
+
   const parseCSV=(text)=>{
     setError("");
-    const lines=text.trim().split("\n").filter(l=>l.trim());
+    const normalized = String(text || "").replace(/^\uFEFF/, "");
+    const lines = parseCsvRows(normalized);
     if(lines.length<2){setError("Need header row + at least 1 question");return;}
-    const headers=lines[0].split(",").map(h=>h.trim().toLowerCase());
+    const headers=lines[0].map(h=>String(h).trim().toLowerCase());
     const required=["question_text","option_a","option_b","option_c","option_d","correct_answer","topic","difficulty","explanation"];
     const missing=required.filter(r=>!headers.includes(r));
     if(missing.length>0){setError("Missing: "+missing.join(", "));return;}
     const rows=[];
     for(let i=1;i<lines.length;i++){
-      const vals=lines[i].split(",");
+      const vals=lines[i];
       if(vals.length<9)continue;
-      const row={};headers.forEach((h,idx)=>row[h]=vals[idx]?.trim()||"");
+      const row={};headers.forEach((h,idx)=>row[h]=String(vals[idx] ?? "").trim());
       const ansMap={A:0,B:1,C:2,D:3,"0":0,"1":1,"2":2,"3":3};
       const ci=ansMap[row.correct_answer?.toUpperCase()];
       if(ci===undefined)continue;
@@ -167,7 +201,23 @@ function BulkUploadModal({onClose,onSaved}){
     if(rows.length===0){setError("No valid questions found");return;}
     setParsed(rows);setStep(3);
   };
-  const handleFile=(file)=>{if(!file)return;const r=new FileReader();r.onload=e=>{setRawText(e.target.result);parseCSV(e.target.result);};r.readAsText(file);};
+  const handleFile = async (file) => {
+    if (!file) return;
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const utf8Text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+      setRawText(utf8Text);
+      parseCSV(utf8Text);
+    } catch {
+      const r = new FileReader();
+      r.onload = (e) => {
+        const text = String(e.target?.result || "");
+        setRawText(text);
+        parseCSV(text);
+      };
+      r.readAsText(file, "utf-8");
+    }
+  };
   const handleUpload=async()=>{
     setUploading(true);
     const{error}=await supabase.from("questions").insert(parsed);
@@ -784,6 +834,281 @@ function SuggestionsPage(){
     </div>
   );
 }
+
+function CategoriesPage({ isSuperAdmin }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const [form, setForm] = useState({ name: "", description: "", logo_url: "", color_hex: "#38BDF8", sort_order: 100, is_active: true });
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("exam_categories").select("*").order("sort_order", { ascending: true }).order("name", { ascending: true });
+    setRows(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const save = async () => {
+    if (!isSuperAdmin) return;
+    if (!form.name.trim()) {
+      setToast({ msg: "Category name is required", type: "error" });
+      return;
+    }
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      logo_url: form.logo_url.trim() || null,
+      color_hex: form.color_hex || "#38BDF8",
+      sort_order: Number(form.sort_order) || 100,
+      is_active: !!form.is_active
+    };
+    const { error } = await supabase.from("exam_categories").insert(payload);
+    if (error) setToast({ msg: error.message, type: "error" });
+    else {
+      setToast({ msg: "Category created", type: "success" });
+      setForm({ name: "", description: "", logo_url: "", color_hex: "#38BDF8", sort_order: 100, is_active: true });
+      load();
+    }
+  };
+
+  const remove = async (id, name) => {
+    if (!isSuperAdmin) return;
+    if (!window.confirm(`Delete category "${name}"?`)) return;
+    const { error } = await supabase.from("exam_categories").delete().eq("id", id);
+    if (error) setToast({ msg: error.message, type: "error" });
+    else {
+      setToast({ msg: "Category deleted", type: "success" });
+      load();
+    }
+  };
+
+  return (
+    <div style={{ padding: 28, maxWidth: 1150 }}>
+      {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+      <h2 style={{ fontWeight: 800, fontSize: 24, marginBottom: 6 }}>Exam Categories</h2>
+      <p style={{ color: "#6A8CAC", fontSize: 13, marginBottom: 20 }}>Create and manage test categories with logos.</p>
+
+      {isSuperAdmin ? (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Add Category</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+            <input className="input" placeholder="Category name (e.g. SSC)" value={form.name} onChange={(e) => setForm((x) => ({ ...x, name: e.target.value }))} />
+            <input className="input" placeholder="Description" value={form.description} onChange={(e) => setForm((x) => ({ ...x, description: e.target.value }))} />
+            <input className="input" placeholder="Logo URL" value={form.logo_url} onChange={(e) => setForm((x) => ({ ...x, logo_url: e.target.value }))} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "130px 120px 160px", gap: 10 }}>
+            <input className="input" type="color" value={form.color_hex} onChange={(e) => setForm((x) => ({ ...x, color_hex: e.target.value }))} />
+            <input className="input" type="number" value={form.sort_order} onChange={(e) => setForm((x) => ({ ...x, sort_order: e.target.value }))} />
+            <button className="btn btn-success" onClick={save}>Save Category</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: "#E8B84B18", border: "1px solid #E8B84B40", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#E8B84B", marginBottom: 12 }}>
+          Only Super Admin can create or delete categories.
+        </div>
+      )}
+
+      {loading ? <Loading /> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {rows.map((row) => (
+            <div key={row.id} className="tbl-row" style={{ gridTemplateColumns: "44px 1fr 180px 120px" }}>
+              <div style={{ width: 34, height: 34, borderRadius: "50%", border: "1px solid #152236", background: row.color_hex ? row.color_hex + "22" : "#0E1A2C", display: "grid", placeItems: "center" }}>
+                {row.logo_url ? <img src={row.logo_url} alt={row.name} style={{ width: 22, height: 22, borderRadius: "50%" }} /> : <span style={{ fontSize: 11, fontWeight: 800, color: row.color_hex || "#38BDF8" }}>{String(row.name || "?").slice(0, 2).toUpperCase()}</span>}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700 }}>{row.name}</div>
+                <div style={{ color: "#6A8CAC", fontSize: 12 }}>{row.description || "No description"}</div>
+              </div>
+              <div style={{ color: "#6A8CAC", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.logo_url || "-"}</div>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                {isSuperAdmin ? <button className="btn btn-danger" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => remove(row.id, row.name)}>Delete</button> : <Tag color="#6A8CAC">View only</Tag>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StudyMaterialsAdminPage({ isSuperAdmin }) {
+  const [rows, setRows] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [form, setForm] = useState({ title: "", description: "", category_name: "", pdf_url: "", language: "English", is_active: true });
+
+  const load = async () => {
+    setLoading(true);
+    const [{ data: materialRows }, { data: categoryRows }] = await Promise.all([
+      supabase.from("study_materials").select("*").order("created_at", { ascending: false }),
+      supabase.from("exam_categories").select("name").eq("is_active", true).order("sort_order", { ascending: true })
+    ]);
+    setRows(materialRows || []);
+    setCategories((categoryRows || []).map((c) => c.name));
+    if (!form.category_name && categoryRows?.length) setForm((x) => ({ ...x, category_name: categoryRows[0].name }));
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const save = async () => {
+    if (!isSuperAdmin) return;
+    if (!form.title.trim() || !form.pdf_url.trim()) {
+      setToast({ msg: "Title and PDF URL are required", type: "error" });
+      return;
+    }
+    setSaving(true);
+    const payload = {
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      category_name: form.category_name || "Other",
+      pdf_url: form.pdf_url.trim(),
+      language: form.language || "English",
+      is_active: !!form.is_active
+    };
+    const { error } = await supabase.from("study_materials").insert(payload);
+    setSaving(false);
+    if (error) setToast({ msg: error.message, type: "error" });
+    else {
+      setToast({ msg: "Study material added", type: "success" });
+      setForm({ title: "", description: "", category_name: categories[0] || "Other", pdf_url: "", language: "English", is_active: true });
+      load();
+    }
+  };
+
+  const remove = async (id, name) => {
+    if (!isSuperAdmin) return;
+    if (!window.confirm(`Delete "${name}"?`)) return;
+    await supabase.from("study_materials").delete().eq("id", id);
+    load();
+  };
+
+  return (
+    <div style={{ padding: 28, maxWidth: 1150 }}>
+      {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+      <h2 style={{ fontWeight: 800, fontSize: 24, marginBottom: 6 }}>Study Material PDFs</h2>
+      <p style={{ color: "#6A8CAC", fontSize: 13, marginBottom: 20 }}>Manage downloadable category-wise PDFs.</p>
+
+      {isSuperAdmin ? (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Add New PDF</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+            <input className="input" placeholder="Title" value={form.title} onChange={(e) => setForm((x) => ({ ...x, title: e.target.value }))} />
+            <select className="select" value={form.category_name} onChange={(e) => setForm((x) => ({ ...x, category_name: e.target.value }))}>{categories.map((name) => <option key={name}>{name}</option>)}</select>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+            <input className="input" placeholder="PDF URL (public)" value={form.pdf_url} onChange={(e) => setForm((x) => ({ ...x, pdf_url: e.target.value }))} />
+            <input className="input" placeholder="Language" value={form.language} onChange={(e) => setForm((x) => ({ ...x, language: e.target.value }))} />
+          </div>
+          <textarea className="input" rows={2} placeholder="Description" value={form.description} onChange={(e) => setForm((x) => ({ ...x, description: e.target.value }))} style={{ resize: "vertical", marginBottom: 10 }} />
+          <button className="btn btn-success" onClick={save} disabled={saving}>{saving ? "Saving..." : "Save PDF"}</button>
+        </div>
+      ) : null}
+
+      {loading ? <Loading /> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {rows.map((row) => (
+            <div key={row.id} className="tbl-row" style={{ gridTemplateColumns: "1fr 120px 1fr 90px" }}>
+              <div>
+                <div style={{ fontWeight: 700 }}>{row.title}</div>
+                <div style={{ color: "#6A8CAC", fontSize: 12 }}>{row.description || "No description"}</div>
+              </div>
+              <Tag color="#38BDF8">{row.category_name || "Other"}</Tag>
+              <div style={{ color: "#6A8CAC", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.pdf_url || "-"}</div>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                {isSuperAdmin ? <button className="btn btn-danger" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => remove(row.id, row.title)}>Delete</button> : <Tag color="#6A8CAC">View only</Tag>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminUsersPage({ isSuperAdmin }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const [form, setForm] = useState({ email: "", role: "admin", is_active: true });
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("admin_users").select("*").order("created_at", { ascending: false });
+    setRows(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const addUser = async () => {
+    if (!isSuperAdmin) return;
+    const email = form.email.trim().toLowerCase();
+    if (!email) {
+      setToast({ msg: "Admin email is required", type: "error" });
+      return;
+    }
+    const { error } = await supabase.from("admin_users").insert({ email, role: form.role, is_active: !!form.is_active });
+    if (error) setToast({ msg: error.message, type: "error" });
+    else {
+      setToast({ msg: "Admin user added", type: "success" });
+      setForm({ email: "", role: "admin", is_active: true });
+      load();
+    }
+  };
+
+  const toggleActive = async (row) => {
+    if (!isSuperAdmin) return;
+    await supabase.from("admin_users").update({ is_active: !row.is_active }).eq("id", row.id);
+    load();
+  };
+
+  return (
+    <div style={{ padding: 28, maxWidth: 980 }}>
+      {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+      <h2 style={{ fontWeight: 800, fontSize: 24, marginBottom: 6 }}>Admin Access Control</h2>
+      <p style={{ color: "#6A8CAC", fontSize: 13, marginBottom: 20 }}>Super Admin can add and manage admin accounts.</p>
+
+      {isSuperAdmin ? (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 140px", gap: 10 }}>
+            <input className="input" placeholder="admin@email.com" value={form.email} onChange={(e) => setForm((x) => ({ ...x, email: e.target.value }))} />
+            <select className="select" value={form.role} onChange={(e) => setForm((x) => ({ ...x, role: e.target.value }))}>
+              <option value="admin">admin</option>
+              <option value="super_admin">super_admin</option>
+            </select>
+            <button className="btn btn-success" onClick={addUser}>Add Admin</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: "#E8B84B18", border: "1px solid #E8B84B40", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#E8B84B", marginBottom: 12 }}>
+          Only Super Admin can change admin access.
+        </div>
+      )}
+
+      {loading ? <Loading /> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {rows.map((row) => (
+            <div key={row.id} className="tbl-row" style={{ gridTemplateColumns: "1fr 140px 110px" }}>
+              <div>
+                <div style={{ fontWeight: 700 }}>{row.email}</div>
+                <div style={{ color: "#6A8CAC", fontSize: 12 }}>Role: {row.role || "admin"}</div>
+              </div>
+              <Tag color={row.role === "super_admin" ? "#A78BFA" : "#38BDF8"}>{row.role || "admin"}</Tag>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                {isSuperAdmin ? <button className="btn btn-ghost" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => toggleActive(row)}>{row.is_active ? "Disable" : "Enable"}</button> : <Tag color={row.is_active ? "#34D399" : "#6A8CAC"}>{row.is_active ? "active" : "inactive"}</Tag>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 function DashboardHome({setPage}){
   const[stats,setStats]=useState({questions:0,users:0,tests:0,attempts:0});
   useEffect(()=>{
@@ -831,6 +1156,7 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
   const [page, setPage]       = useState("dashboard");
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
+  const [adminRole, setAdminRole] = useState("admin");
   const [accessError, setAccessError] = useState("");
   const [manualUnlocked, setManualUnlocked] = useState(false);
   const [manualPass, setManualPass] = useState("");
@@ -848,11 +1174,13 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
           method: "GET",
           headers: { Authorization: "Bearer " + session.access_token }
         });
+        const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
           setAllowed(false);
           setAccessError("Access denied. Admin role required.");
         } else {
           setAllowed(true);
+          setAdminRole(payload?.role || "admin");
         }
       } catch {
         setAllowed(false);
@@ -922,7 +1250,10 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
     {id:"dashboard", icon:"⊞", label:"Dashboard"},
     {id:"questions", icon:"❓", label:"Questions"},
     {id:"tests",     icon:"📋", label:"Tests"},
+    {id:"categories", icon:"🏷", label:"Categories"},
+    {id:"materials", icon:"📚", label:"Study PDFs"},
     {id:"users",     icon:"👥", label:"Users"},
+    {id:"admins",    icon:"🛡", label:"Admin Access"},
     {id:"attempts",  icon:"📊", label:"Attempts"},
     {id:"suggestions", icon:"📌", label:"Suggestions"},
     {id:"ai",        icon:"🤖", label:"AI Generator"},
@@ -940,6 +1271,7 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
           <div style={{display:"flex",alignItems:"center",gap:8,background:"#34D39912",border:"1px solid #34D39930",borderRadius:9,padding:"8px 12px",marginBottom:18}}>
             <span style={{width:7,height:7,borderRadius:"50%",background:"#34D399",animation:"pulse 2s infinite",flexShrink:0}}/>
             <span style={{fontSize:11,color:"#34D399",fontWeight:700}}>PLATFORM LIVE</span>
+            <span style={{marginLeft:"auto",fontSize:10,color:adminRole==="super_admin"?"#A78BFA":"#6A8CAC",fontWeight:700}}>{adminRole==="super_admin"?"SUPER":"ADMIN"}</span>
           </div>
           <nav style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
             {nav.map(n=>(
@@ -958,7 +1290,10 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
           {page==="dashboard" && <DashboardHome setPage={setPage}/>}
           {page==="questions" && <QuestionsPage/>}
           {page==="tests"     && <TestsPage/>}
+          {page==="categories" && <CategoriesPage isSuperAdmin={adminRole==="super_admin"}/>}
+          {page==="materials" && <StudyMaterialsAdminPage isSuperAdmin={adminRole==="super_admin"}/>}
           {page==="users"     && <UsersPage/>}
+          {page==="admins" && <AdminUsersPage isSuperAdmin={adminRole==="super_admin"}/>}
           {page==="attempts"  && <AttemptsPage/>}
           {page==="suggestions" && <SuggestionsPage/>}
           {page==="ai"        && <AIGeneratorPage/>}
