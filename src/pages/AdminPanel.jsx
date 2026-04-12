@@ -63,6 +63,17 @@ function Toast({message,type,onDone}){
 function Tag({children,color}){return<span className="tag" style={{background:color+"1A",color,border:`1px solid ${color}30`}}>{children}</span>;}
 function Mono({children,color="#38BDF8",size=13}){return<span style={{fontFamily:"'Fira Code',monospace",fontSize:size,color,fontWeight:500}}>{children}</span>;}
 function Loading(){return(<div style={{textAlign:"center",padding:60}}><div style={{width:36,height:36,border:"2px solid #152236",borderTopColor:"#38BDF8",borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 16px"}}/><div style={{color:"#6A8CAC",fontSize:13}}>Loading...</div></div>);}
+function SafeLogo({src,name,color="#38BDF8",size=22}){
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) {
+    return (
+      <span style={{ width:size, height:size, borderRadius:"50%", background:color+"22", border:`1px solid ${color}44`, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:800, color }}>
+        {String(name||"?").slice(0,2).toUpperCase()}
+      </span>
+    );
+  }
+  return <img src={src} alt={name} onError={()=>setBroken(true)} style={{width:size,height:size,borderRadius:"50%",objectFit:"cover"}} />;
+}
 
 
 // ── QUESTION MODAL ────────────────────────────────────────────────────────────
@@ -915,7 +926,7 @@ function CategoriesPage({ isSuperAdmin }) {
           {rows.map((row) => (
             <div key={row.id} className="tbl-row" style={{ gridTemplateColumns: "44px 1fr 180px 120px" }}>
               <div style={{ width: 34, height: 34, borderRadius: "50%", border: "1px solid #152236", background: row.color_hex ? row.color_hex + "22" : "#0E1A2C", display: "grid", placeItems: "center" }}>
-                {row.logo_url ? <img src={row.logo_url} alt={row.name} style={{ width: 22, height: 22, borderRadius: "50%" }} /> : <span style={{ fontSize: 11, fontWeight: 800, color: row.color_hex || "#38BDF8" }}>{String(row.name || "?").slice(0, 2).toUpperCase()}</span>}
+                <SafeLogo src={row.logo_url} name={row.name} color={row.color_hex || "#38BDF8"} size={22} />
               </div>
               <div>
                 <div style={{ fontWeight: 700 }}>{row.name}</div>
@@ -939,16 +950,16 @@ function StudyMaterialsAdminPage({ isSuperAdmin }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
-  const [form, setForm] = useState({ title: "", description: "", category_name: "", pdf_url: "", language: "English", is_active: true });
+  const [form, setForm] = useState({ title: "", description: "", category_name: "", pdf_url: "", logo_url: "", language: "English", is_active: true });
 
   const load = async () => {
     setLoading(true);
     const [{ data: materialRows }, { data: categoryRows }] = await Promise.all([
       supabase.from("study_materials").select("*").order("created_at", { ascending: false }),
-      supabase.from("exam_categories").select("name").eq("is_active", true).order("sort_order", { ascending: true })
+      supabase.from("exam_categories").select("name,logo_url,color_hex").eq("is_active", true).order("sort_order", { ascending: true })
     ]);
     setRows(materialRows || []);
-    setCategories((categoryRows || []).map((c) => c.name));
+    setCategories(categoryRows || []);
     if (!form.category_name && categoryRows?.length) setForm((x) => ({ ...x, category_name: categoryRows[0].name }));
     setLoading(false);
   };
@@ -956,7 +967,6 @@ function StudyMaterialsAdminPage({ isSuperAdmin }) {
   useEffect(() => { load(); }, []);
 
   const save = async () => {
-    if (!isSuperAdmin) return;
     if (!form.title.trim() || !form.pdf_url.trim()) {
       setToast({ msg: "Title and PDF URL are required", type: "error" });
       return;
@@ -967,21 +977,32 @@ function StudyMaterialsAdminPage({ isSuperAdmin }) {
       description: form.description.trim() || null,
       category_name: form.category_name || "Other",
       pdf_url: form.pdf_url.trim(),
+      logo_url: form.logo_url.trim() || null,
       language: form.language || "English",
       is_active: !!form.is_active
     };
-    const { error } = await supabase.from("study_materials").insert(payload);
+    let { error } = await supabase.from("study_materials").insert(payload);
+    if (error && String(error.message || "").toLowerCase().includes("logo_url")) {
+      const retry = await supabase.from("study_materials").insert({
+        title: payload.title,
+        description: payload.description,
+        category_name: payload.category_name,
+        pdf_url: payload.pdf_url,
+        language: payload.language,
+        is_active: payload.is_active
+      });
+      error = retry.error;
+    }
     setSaving(false);
     if (error) setToast({ msg: error.message, type: "error" });
     else {
       setToast({ msg: "Study material added", type: "success" });
-      setForm({ title: "", description: "", category_name: categories[0] || "Other", pdf_url: "", language: "English", is_active: true });
+      setForm({ title: "", description: "", category_name: categories[0]?.name || "Other", pdf_url: "", logo_url: "", language: "English", is_active: true });
       load();
     }
   };
 
   const remove = async (id, name) => {
-    if (!isSuperAdmin) return;
     if (!window.confirm(`Delete "${name}"?`)) return;
     await supabase.from("study_materials").delete().eq("id", id);
     load();
@@ -993,26 +1014,33 @@ function StudyMaterialsAdminPage({ isSuperAdmin }) {
       <h2 style={{ fontWeight: 800, fontSize: 24, marginBottom: 6 }}>Study Material PDFs</h2>
       <p style={{ color: "#6A8CAC", fontSize: 13, marginBottom: 20 }}>Manage downloadable category-wise PDFs.</p>
 
-      {isSuperAdmin ? (
-        <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Add New PDF</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <input className="input" placeholder="Title" value={form.title} onChange={(e) => setForm((x) => ({ ...x, title: e.target.value }))} />
-            <select className="select" value={form.category_name} onChange={(e) => setForm((x) => ({ ...x, category_name: e.target.value }))}>{categories.map((name) => <option key={name}>{name}</option>)}</select>
+            <select className="select" value={form.category_name} onChange={(e) => setForm((x) => ({ ...x, category_name: e.target.value }))}>{categories.map((row) => <option key={row.name}>{row.name}</option>)}</select>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <input className="input" placeholder="PDF URL (public)" value={form.pdf_url} onChange={(e) => setForm((x) => ({ ...x, pdf_url: e.target.value }))} />
             <input className="input" placeholder="Language" value={form.language} onChange={(e) => setForm((x) => ({ ...x, language: e.target.value }))} />
           </div>
+          <input className="input" placeholder="Logo URL (optional)" value={form.logo_url} onChange={(e) => setForm((x) => ({ ...x, logo_url: e.target.value }))} style={{ marginBottom: 10 }} />
           <textarea className="input" rows={2} placeholder="Description" value={form.description} onChange={(e) => setForm((x) => ({ ...x, description: e.target.value }))} style={{ resize: "vertical", marginBottom: 10 }} />
           <button className="btn btn-success" onClick={save} disabled={saving}>{saving ? "Saving..." : "Save PDF"}</button>
         </div>
-      ) : null}
 
       {loading ? <Loading /> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {rows.map((row) => (
-            <div key={row.id} className="tbl-row" style={{ gridTemplateColumns: "1fr 120px 1fr 90px" }}>
+            <div key={row.id} className="tbl-row" style={{ gridTemplateColumns: "44px 1fr 120px 1fr 90px" }}>
+              <div style={{display:"grid",placeItems:"center"}}>
+                <SafeLogo
+                  src={row.logo_url || categories.find((c)=>c.name===row.category_name)?.logo_url}
+                  name={row.category_name || "PDF"}
+                  color={categories.find((c)=>c.name===row.category_name)?.color_hex || "#38BDF8"}
+                  size={22}
+                />
+              </div>
               <div>
                 <div style={{ fontWeight: 700 }}>{row.title}</div>
                 <div style={{ color: "#6A8CAC", fontSize: 12 }}>{row.description || "No description"}</div>
@@ -1020,7 +1048,7 @@ function StudyMaterialsAdminPage({ isSuperAdmin }) {
               <Tag color="#38BDF8">{row.category_name || "Other"}</Tag>
               <div style={{ color: "#6A8CAC", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.pdf_url || "-"}</div>
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                {isSuperAdmin ? <button className="btn btn-danger" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => remove(row.id, row.title)}>Delete</button> : <Tag color="#6A8CAC">View only</Tag>}
+                <button className="btn btn-danger" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => remove(row.id, row.title)}>Delete</button>
               </div>
             </div>
           ))}
