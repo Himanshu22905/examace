@@ -949,6 +949,9 @@ function StudyMaterialsAdminPage({ isSuperAdmin }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [toast, setToast] = useState(null);
   const [form, setForm] = useState({ title: "", description: "", category_name: "", pdf_url: "", logo_url: "", language: "English", is_active: true });
 
@@ -967,39 +970,93 @@ function StudyMaterialsAdminPage({ isSuperAdmin }) {
   useEffect(() => { load(); }, []);
 
   const save = async () => {
-    if (!form.title.trim() || !form.pdf_url.trim()) {
-      setToast({ msg: "Title and PDF URL are required", type: "error" });
+    if (!form.title.trim()) {
+      setToast({ msg: "Title is required", type: "error" });
       return;
     }
     setSaving(true);
+    let finalPdfUrl = form.pdf_url.trim();
+    if (!finalPdfUrl && selectedFile) {
+      setUploadingFile(true);
+      const clean = String(form.title || "material").replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").toLowerCase();
+      const filePath = `${Date.now()}-${clean || "material"}.pdf`;
+      const uploadRes = await supabase.storage.from("study-materials").upload(filePath, selectedFile, { upsert: true, contentType: "application/pdf" });
+      setUploadingFile(false);
+      if (uploadRes.error) {
+        setSaving(false);
+        setToast({ msg: `Upload failed: ${uploadRes.error.message}`, type: "error" });
+        return;
+      }
+      const pub = supabase.storage.from("study-materials").getPublicUrl(filePath);
+      finalPdfUrl = pub.data?.publicUrl || "";
+    }
+    if (!finalPdfUrl) {
+      setSaving(false);
+      setToast({ msg: "Add PDF URL or upload a PDF file", type: "error" });
+      return;
+    }
     const payload = {
       title: form.title.trim(),
       description: form.description.trim() || null,
       category_name: form.category_name || "Other",
-      pdf_url: form.pdf_url.trim(),
+      pdf_url: finalPdfUrl,
       logo_url: form.logo_url.trim() || null,
       language: form.language || "English",
       is_active: !!form.is_active
     };
-    let { error } = await supabase.from("study_materials").insert(payload);
-    if (error && String(error.message || "").toLowerCase().includes("logo_url")) {
-      const retry = await supabase.from("study_materials").insert({
-        title: payload.title,
-        description: payload.description,
-        category_name: payload.category_name,
-        pdf_url: payload.pdf_url,
-        language: payload.language,
-        is_active: payload.is_active
-      });
-      error = retry.error;
+    let error = null;
+    if (editingId) {
+      const updateRes = await supabase.from("study_materials").update(payload).eq("id", editingId);
+      error = updateRes.error;
+      if (error && String(error.message || "").toLowerCase().includes("logo_url")) {
+        const retry = await supabase.from("study_materials").update({
+          title: payload.title,
+          description: payload.description,
+          category_name: payload.category_name,
+          pdf_url: payload.pdf_url,
+          language: payload.language,
+          is_active: payload.is_active
+        }).eq("id", editingId);
+        error = retry.error;
+      }
+    } else {
+      const insertRes = await supabase.from("study_materials").insert(payload);
+      error = insertRes.error;
+      if (error && String(error.message || "").toLowerCase().includes("logo_url")) {
+        const retry = await supabase.from("study_materials").insert({
+          title: payload.title,
+          description: payload.description,
+          category_name: payload.category_name,
+          pdf_url: payload.pdf_url,
+          language: payload.language,
+          is_active: payload.is_active
+        });
+        error = retry.error;
+      }
     }
     setSaving(false);
     if (error) setToast({ msg: error.message, type: "error" });
     else {
-      setToast({ msg: "Study material added", type: "success" });
+      setToast({ msg: editingId ? "Study material updated" : "Study material added", type: "success" });
       setForm({ title: "", description: "", category_name: categories[0]?.name || "Other", pdf_url: "", logo_url: "", language: "English", is_active: true });
+      setSelectedFile(null);
+      setEditingId(null);
       load();
     }
+  };
+
+  const startEdit = (row) => {
+    setEditingId(row.id);
+    setForm({
+      title: row.title || "",
+      description: row.description || "",
+      category_name: row.category_name || categories[0]?.name || "Other",
+      pdf_url: row.pdf_url || "",
+      logo_url: row.logo_url || "",
+      language: row.language || "English",
+      is_active: row.is_active !== false
+    });
+    setSelectedFile(null);
   };
 
   const remove = async (id, name) => {
@@ -1024,9 +1081,16 @@ function StudyMaterialsAdminPage({ isSuperAdmin }) {
             <input className="input" placeholder="PDF URL (public)" value={form.pdf_url} onChange={(e) => setForm((x) => ({ ...x, pdf_url: e.target.value }))} />
             <input className="input" placeholder="Language" value={form.language} onChange={(e) => setForm((x) => ({ ...x, language: e.target.value }))} />
           </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10,marginBottom:10,alignItems:"center"}}>
+            <input className="input" type="file" accept="application/pdf,.pdf" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
+            <Tag color={selectedFile ? "#34D399" : "#6A8CAC"}>{selectedFile ? selectedFile.name : "No file selected"}</Tag>
+          </div>
           <input className="input" placeholder="Logo URL (optional)" value={form.logo_url} onChange={(e) => setForm((x) => ({ ...x, logo_url: e.target.value }))} style={{ marginBottom: 10 }} />
           <textarea className="input" rows={2} placeholder="Description" value={form.description} onChange={(e) => setForm((x) => ({ ...x, description: e.target.value }))} style={{ resize: "vertical", marginBottom: 10 }} />
-          <button className="btn btn-success" onClick={save} disabled={saving}>{saving ? "Saving..." : "Save PDF"}</button>
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn btn-success" onClick={save} disabled={saving || uploadingFile}>{saving || uploadingFile ? (uploadingFile ? "Uploading..." : "Saving...") : editingId ? "Update PDF" : "Save PDF"}</button>
+            {editingId ? <button className="btn btn-ghost" onClick={() => { setEditingId(null); setForm({ title: "", description: "", category_name: categories[0]?.name || "Other", pdf_url: "", logo_url: "", language: "English", is_active: true }); setSelectedFile(null); }}>Cancel Edit</button> : null}
+          </div>
         </div>
 
       {loading ? <Loading /> : (
@@ -1048,7 +1112,116 @@ function StudyMaterialsAdminPage({ isSuperAdmin }) {
               <Tag color="#38BDF8">{row.category_name || "Other"}</Tag>
               <div style={{ color: "#6A8CAC", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.pdf_url || "-"}</div>
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button className="btn btn-danger" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => remove(row.id, row.title)}>Delete</button>
+                <div style={{display:"flex",gap:6}}>
+                  <button className="btn btn-ghost" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => startEdit(row)}>Edit</button>
+                  <button className="btn btn-danger" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => remove(row.id, row.title)}>Delete</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SocialLinksPage() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [form, setForm] = useState({ platform: "", url: "", icon_text: "🔗", display_order: 100, is_active: true });
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("site_social_links").select("*").order("display_order", { ascending: true });
+    setRows(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const resetForm = () => {
+    setEditingId(null);
+    setForm({ platform: "", url: "", icon_text: "🔗", display_order: 100, is_active: true });
+  };
+
+  const save = async () => {
+    if (!form.platform.trim() || !form.url.trim()) {
+      setToast({ msg: "Platform and URL are required", type: "error" });
+      return;
+    }
+    setSaving(true);
+    const payload = {
+      platform: form.platform.trim(),
+      url: form.url.trim(),
+      icon_text: form.icon_text.trim() || "🔗",
+      display_order: Number(form.display_order) || 100,
+      is_active: !!form.is_active
+    };
+    let res;
+    if (editingId) res = await supabase.from("site_social_links").update(payload).eq("id", editingId);
+    else res = await supabase.from("site_social_links").insert(payload);
+    setSaving(false);
+    if (res.error) setToast({ msg: res.error.message, type: "error" });
+    else {
+      setToast({ msg: editingId ? "Social link updated" : "Social link added", type: "success" });
+      resetForm();
+      load();
+    }
+  };
+
+  const edit = (row) => {
+    setEditingId(row.id);
+    setForm({
+      platform: row.platform || "",
+      url: row.url || "",
+      icon_text: row.icon_text || "🔗",
+      display_order: row.display_order || 100,
+      is_active: row.is_active !== false
+    });
+  };
+
+  const remove = async (row) => {
+    if (!window.confirm(`Delete social link "${row.platform}"?`)) return;
+    await supabase.from("site_social_links").delete().eq("id", row.id);
+    load();
+  };
+
+  return (
+    <div style={{ padding: 28, maxWidth: 1100 }}>
+      {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+      <h2 style={{ fontWeight: 800, fontSize: 24, marginBottom: 6 }}>Social Media Links</h2>
+      <p style={{ color: "#6A8CAC", fontSize: 13, marginBottom: 20 }}>Manage website footer social icons and links.</p>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>{editingId ? "Edit Social Link" : "Add Social Link"}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 90px 120px", gap: 10, marginBottom: 10 }}>
+          <input className="input" placeholder="Platform (Instagram)" value={form.platform} onChange={(e) => setForm((x) => ({ ...x, platform: e.target.value }))} />
+          <input className="input" placeholder="https://..." value={form.url} onChange={(e) => setForm((x) => ({ ...x, url: e.target.value }))} />
+          <input className="input" placeholder="Icon" value={form.icon_text} onChange={(e) => setForm((x) => ({ ...x, icon_text: e.target.value }))} />
+          <input className="input" type="number" placeholder="Order" value={form.display_order} onChange={(e) => setForm((x) => ({ ...x, display_order: e.target.value }))} />
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-success" onClick={save} disabled={saving}>{saving ? "Saving..." : editingId ? "Update" : "Add"}</button>
+          {editingId ? <button className="btn btn-ghost" onClick={resetForm}>Cancel</button> : null}
+        </div>
+      </div>
+
+      {loading ? <Loading /> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {rows.map((row) => (
+            <div key={row.id} className="tbl-row" style={{ gridTemplateColumns: "50px 1fr 1fr 130px" }}>
+              <div style={{fontSize:20,textAlign:"center"}}>{row.icon_text || "🔗"}</div>
+              <div>
+                <div style={{fontWeight:700}}>{row.platform}</div>
+                <div style={{fontSize:12,color:"#6A8CAC"}}>Order: {row.display_order ?? 100}</div>
+              </div>
+              <div style={{fontSize:12,color:"#6A8CAC",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.url}</div>
+              <div style={{display:"flex",justifyContent:"flex-end",gap:6}}>
+                <button className="btn btn-ghost" style={{padding:"5px 10px",fontSize:11}} onClick={() => edit(row)}>Edit</button>
+                <button className="btn btn-danger" style={{padding:"5px 10px",fontSize:11}} onClick={() => remove(row)}>Delete</button>
               </div>
             </div>
           ))}
@@ -1280,6 +1453,7 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
     {id:"tests",     icon:"📋", label:"Tests"},
     {id:"categories", icon:"🏷", label:"Categories"},
     {id:"materials", icon:"📚", label:"Study PDFs"},
+    {id:"socials", icon:"🔗", label:"Social Links"},
     {id:"users",     icon:"👥", label:"Users"},
     {id:"admins",    icon:"🛡", label:"Admin Access"},
     {id:"attempts",  icon:"📊", label:"Attempts"},
@@ -1320,6 +1494,7 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
           {page==="tests"     && <TestsPage/>}
           {page==="categories" && <CategoriesPage isSuperAdmin={adminRole==="super_admin"}/>}
           {page==="materials" && <StudyMaterialsAdminPage isSuperAdmin={adminRole==="super_admin"}/>}
+          {page==="socials" && <SocialLinksPage/>}
           {page==="users"     && <UsersPage/>}
           {page==="admins" && <AdminUsersPage isSuperAdmin={adminRole==="super_admin"}/>}
           {page==="attempts"  && <AttemptsPage/>}

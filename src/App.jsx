@@ -5,6 +5,9 @@ import Dashboard from './pages/Dashboard'
 import MockTestInterface from './pages/MockTestInterface'
 import AdminPanel from './pages/AdminPanel'
 import DailyQuiz from './pages/DailyQuiz'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsConditions from './pages/TermsConditions'
+import Disclaimer from './pages/Disclaimer'
 
 export default function App() {
   return (
@@ -18,6 +21,9 @@ export default function App() {
         <Route path="/admin" element={<Navigate to="/super-admin" replace />} />
         <Route path="/super-admin" element={<AdminPanel />} />
         <Route path="/admin-direct" element={<AdminPanel allowPasswordFallback={true} />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-and-conditions" element={<TermsConditions />} />
+        <Route path="/disclaimer" element={<Disclaimer />} />
       </Routes>
     </BrowserRouter>
   )

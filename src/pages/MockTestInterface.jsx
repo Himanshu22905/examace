@@ -157,7 +157,7 @@ export default function MockTestInterface() {
       <div style={{ minHeight: "100vh", background: "#030508", padding: "40px 20px" }}>
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
           <button className="btn btn-ghost" style={{ marginBottom: 24, fontSize: 13 }} onClick={() => window.location.href = "/dashboard"}>← Back to Dashboard</button>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "#7090B0", letterSpacing: 2.5, marginBottom: 8 }}>EXAMACE · TEST CENTRE</div>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "#7090B0", letterSpacing: 2.5, marginBottom: 8 }}>MOCKIES · TEST CENTRE</div>
           <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 6 }}>Available <span style={{ color: "#E8B84B" }}>Mock Tests</span></h1>
           <p style={{ color: "#7090B0", fontSize: 14, marginBottom: 32 }}>Choose a test to begin your preparation</p>
 

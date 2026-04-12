@@ -803,7 +803,7 @@ export default function App() {
           <div style={{ maxWidth:1200, margin:"0 auto" }}>
             <div style={{ padding:"22px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <div>
-                <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:G.sub, letterSpacing:2.5, textTransform:"uppercase", marginBottom:6 }}>ExamAce · Performance Hub</div>
+                <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:G.sub, letterSpacing:2.5, textTransform:"uppercase", marginBottom:6 }}>Mockies · Performance Hub</div>
                 <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:600, letterSpacing:0.5 }}>
                   Analytics & <em style={{ color:G.gold }}>Results</em>
                 </h1>
@@ -1651,7 +1651,7 @@ export default function App() {
           <div style={{ maxWidth:1200, margin:"0 auto" }}>
             <div style={{ padding:"22px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <div>
-                <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:G.sub, letterSpacing:2.5, textTransform:"uppercase", marginBottom:6 }}>ExamAce · Performance Hub</div>
+                <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:G.sub, letterSpacing:2.5, textTransform:"uppercase", marginBottom:6 }}>Mockies · Performance Hub</div>
                 <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:600, letterSpacing:0.5 }}>
                   Analytics & <em style={{ color:G.gold }}>Results</em>
                 </h1>

@@ -1,5 +1,9 @@
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+
 export default function LandingPage() {
   const go = (path) => { window.location.href = path }
+  const [socialLinks, setSocialLinks] = useState([]);
 
   const CSS = `
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
@@ -82,6 +86,25 @@ export default function LandingPage() {
     { name:"Rahul Verma", exam:"IBPS PO 2024", score:"92%", text:"The analytics showed me my weak areas. Improved my score by 25% in just 2 months!" },
     { name:"Ananya Singh", exam:"JEE Main 2024", score:"94%", text:"Best free platform for JEE. Question quality is excellent and interface matches real exam." },
   ]
+
+  const faqs = [
+    { q: "Is Mockies completely free?", a: "Yes. Mockies is free for students. Some future premium tools may be optional, but core mock tests remain free." },
+    { q: "Are these tests like real exams?", a: "Yes. Interface, timer, navigation, and analytics are designed to match real CBT exam flow." },
+    { q: "Can I use Mockies in Hindi?", a: "Yes. Hindi and Unicode-supported questions can be uploaded and displayed on platform." },
+    { q: "How often are tests updated?", a: "Admin team can publish and update tests daily from super-admin panel." }
+  ];
+
+  useEffect(() => {
+    const loadSocials = async () => {
+      const { data } = await supabase
+        .from("site_social_links")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      setSocialLinks(data || []);
+    };
+    loadSocials();
+  }, []);
 
   return (
     <>
@@ -208,14 +231,35 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="section" style={{ background:"#06090F" }}>
+        <h2 className="section-title">Frequently Asked <span className="gold-text">Questions</span></h2>
+        <p className="section-sub">Everything students ask before starting.</p>
+        <div style={{ maxWidth: 980, margin: "0 auto", display: "grid", gap: 12 }}>
+          {faqs.map((item) => (
+            <div key={item.q} className="feat-card">
+              <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>{item.q}</div>
+              <div style={{ fontSize: 14, color: "#7090B0", lineHeight: 1.7 }}>{item.a}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <footer className="footer">
         <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:18, fontWeight:700, color:"#E8B84B" }}>⚡ MOCKIES</div>
         <div style={{ display:"flex", gap:24 }}>
-          {[["Exams","#exams"],["Features","#features"],["Login","/login"],["Admin","/admin"]].map(([l,h]) => (
+          {[["Exams","#exams"],["Features","#features"],["Login","/login"],["Admin","/super-admin"],["Privacy","/privacy-policy"],["Terms","/terms-and-conditions"],["Disclaimer","/disclaimer"]].map(([l,h]) => (
             <a key={l} href={h} style={{ color:"#7090B0", fontSize:13, textDecoration:"none" }}>{l}</a>
           ))}
         </div>
-        <div style={{ color:"#7090B0", fontSize:13 }}>© 2025 Mockies. Free forever for students.</div>
+        <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+          {socialLinks.map((item) => (
+            <a key={item.id || item.platform} href={item.url} target="_blank" rel="noreferrer" style={{ display:"inline-flex", alignItems:"center", gap:6, border:"1px solid #1C2E49", borderRadius:999, padding:"5px 10px", color:"#9CB3CF", textDecoration:"none", fontSize:12 }}>
+              <span>{item.icon_text || "🔗"}</span>
+              <span>{item.platform || "Social"}</span>
+            </a>
+          ))}
+          <div style={{ color:"#7090B0", fontSize:13 }}>© 2026 Mockies. Free forever for students.</div>
+        </div>
       </footer>
     </>
   )
