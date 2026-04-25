@@ -1,0 +1,18 @@
+{
+  "surveys": [
+    {
+      "name": "Customer Experience QA",
+      "url": "https://your-survey-link.com",
+      "responses_per_run": 5
+    }
+  ],
+  "target_audience": "Adults who recently used your product or service.",
+  "openai_api_key": "sk-your-openai-api-key-here",
+  "delays": {
+    "min_seconds": 1.5,
+    "max_seconds": 4.0,
+    "typing_speed_ms": 80
+  },
+  "headless": false,
+  "output_dir": "results/"
+}

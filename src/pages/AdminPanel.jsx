@@ -42,6 +42,15 @@ const CSS = `
   .drop-zone:hover{border-color:#38BDF8;background:#38BDF808;}
   .label{font-size:12px;font-weight:700;color:#6A8CAC;display:block;margin-bottom:7px;letter-spacing:0.5px;}
   .sm-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(2,4,8,0.3);border-top-color:#020408;border-radius:50%;animation:spin 0.7s linear infinite;}
+  .mobile-switch{display:none;}
+  @media(max-width: 900px){
+    .admin-shell{display:block !important;}
+    .admin-sidebar{display:none !important;}
+    .admin-content{width:100% !important;max-width:100% !important;}
+    .mobile-switch{display:flex;position:sticky;top:0;z-index:120;background:#050810;border-bottom:1px solid #0E1A2C;padding:10px 12px;gap:8px;align-items:center;}
+    .mobile-switch select{flex:1;min-width:0;}
+    .mobile-title{font-size:12px;color:#38BDF8;font-weight:700;letter-spacing:1px;white-space:nowrap;}
+  }
 `;
 
 const SUBJECTS = {
@@ -436,7 +445,7 @@ function AIGeneratorPage(){
           "Content-Type":"application/json",
           "Authorization":"Bearer " + session.access_token
         },
-        body:JSON.stringify({prompt, scope:"admin"})
+        body:JSON.stringify({prompt})
       });
       const data=await res.json();
       if(!res.ok){setError(data.error||"Failed to generate questions");setLoading(false);return;}
@@ -917,7 +926,7 @@ function CategoriesPage({ isSuperAdmin }) {
         </div>
       ) : (
         <div style={{ background: "#E8B84B18", border: "1px solid #E8B84B40", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#E8B84B", marginBottom: 12 }}>
-          Only Super Admin can create or delete categories.
+          Only Super User can create or delete categories.
         </div>
       )}
 
@@ -1271,23 +1280,23 @@ function AdminUsersPage({ isSuperAdmin }) {
   return (
     <div style={{ padding: 28, maxWidth: 980 }}>
       {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
-      <h2 style={{ fontWeight: 800, fontSize: 24, marginBottom: 6 }}>Admin Access Control</h2>
-      <p style={{ color: "#6A8CAC", fontSize: 13, marginBottom: 20 }}>Super Admin can add and manage admin accounts.</p>
+      <h2 style={{ fontWeight: 800, fontSize: 24, marginBottom: 6 }}>Access Control</h2>
+      <p style={{ color: "#6A8CAC", fontSize: 13, marginBottom: 20 }}>Super User can add and manage access accounts.</p>
 
       {isSuperAdmin ? (
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 140px", gap: 10 }}>
-            <input className="input" placeholder="admin@email.com" value={form.email} onChange={(e) => setForm((x) => ({ ...x, email: e.target.value }))} />
+            <input className="input" placeholder="user@email.com" value={form.email} onChange={(e) => setForm((x) => ({ ...x, email: e.target.value }))} />
             <select className="select" value={form.role} onChange={(e) => setForm((x) => ({ ...x, role: e.target.value }))}>
-              <option value="admin">admin</option>
-              <option value="super_admin">super_admin</option>
+              <option value="admin">standard</option>
+              <option value="super_admin">super</option>
             </select>
-            <button className="btn btn-success" onClick={addUser}>Add Admin</button>
+            <button className="btn btn-success" onClick={addUser}>Add Access User</button>
           </div>
         </div>
       ) : (
         <div style={{ background: "#E8B84B18", border: "1px solid #E8B84B40", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#E8B84B", marginBottom: 12 }}>
-          Only Super Admin can change admin access.
+          Only Super User can change access permissions.
         </div>
       )}
 
@@ -1297,9 +1306,9 @@ function AdminUsersPage({ isSuperAdmin }) {
             <div key={row.id} className="tbl-row" style={{ gridTemplateColumns: "1fr 140px 110px" }}>
               <div>
                 <div style={{ fontWeight: 700 }}>{row.email}</div>
-                <div style={{ color: "#6A8CAC", fontSize: 12 }}>Role: {row.role || "admin"}</div>
+                <div style={{ color: "#6A8CAC", fontSize: 12 }}>Role: {row.role === "super_admin" ? "super" : "standard"}</div>
               </div>
-              <Tag color={row.role === "super_admin" ? "#A78BFA" : "#38BDF8"}>{row.role || "admin"}</Tag>
+              <Tag color={row.role === "super_admin" ? "#A78BFA" : "#38BDF8"}>{row.role === "super_admin" ? "super" : "standard"}</Tag>
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 {isSuperAdmin ? <button className="btn btn-ghost" style={{ padding: "5px 10px", fontSize: 11 }} onClick={() => toggleActive(row)}>{row.is_active ? "Disable" : "Enable"}</button> : <Tag color={row.is_active ? "#34D399" : "#6A8CAC"}>{row.is_active ? "active" : "inactive"}</Tag>}
               </div>
@@ -1322,7 +1331,7 @@ function DashboardHome({setPage}){
   },[]);
   return(
     <div style={{padding:28,maxWidth:1100}}>
-      <h2 style={{fontWeight:800,fontSize:24,marginBottom:6}}>Admin Dashboard</h2>
+      <h2 style={{fontWeight:800,fontSize:24,marginBottom:6}}>Dashboard</h2>
       <p style={{color:"#6A8CAC",fontSize:13,marginBottom:28}}>mockies.in — Live platform overview</p>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:32}}>
         {[["❓","Questions",stats.questions,"#E8B84B"],["👥","Users",stats.users,"#38BDF8"],["📋","Tests",stats.tests,"#A78BFA"],["📝","Attempts",stats.attempts,"#34D399"]].map(([icon,label,val,color])=>(
@@ -1378,7 +1387,7 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
           setAllowed(false);
-          setAccessError("Access denied. Admin role required.");
+          setAccessError("Access denied. Authorized role required.");
         } else {
           setAllowed(true);
           setAdminRole(payload?.role || "admin");
@@ -1407,15 +1416,15 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
       <style>{CSS}</style>
       <div style={{minHeight:"100vh",background:"#020408",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
         <div style={{background:"#080C18",border:"1px solid #152236",borderRadius:16,padding:24,maxWidth:560,width:"100%"}}>
-          <div style={{fontWeight:800,fontSize:22,marginBottom:8}}>Admin Access Blocked</div>
-          <div style={{color:"#6A8CAC",fontSize:14,marginBottom:14}}>{accessError || "You are not authorized to open admin panel."}</div>
+          <div style={{fontWeight:800,fontSize:22,marginBottom:8}}>Access Blocked</div>
+          <div style={{color:"#6A8CAC",fontSize:14,marginBottom:14}}>{accessError || "You are not authorized to open this panel."}</div>
           {allowPasswordFallback && (
             <div style={{marginBottom:14,padding:12,border:"1px solid #0E1A2C",borderRadius:10,background:"#050810"}}>
               <div style={{fontSize:12,color:"#6A8CAC",marginBottom:8}}>Fallback Access (Temporary)</div>
               <input
                 className="input"
                 type="password"
-                placeholder="Enter admin fallback password"
+                placeholder="Enter access fallback password"
                 value={manualPass}
                 onChange={(e)=>{setManualPass(e.target.value);setManualError("");}}
                 onKeyDown={(e)=>{
@@ -1440,7 +1449,7 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
           )}
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button className="btn btn-ghost" onClick={()=>window.location.href="/dashboard"}>Go to Dashboard</button>
-            <button className="btn btn-ghost" onClick={()=>window.location.href="/admin-direct"}>Open Separate Admin</button>
+            <button className="btn btn-ghost" onClick={()=>window.location.href="/admin-direct"}>Open Separate Panel</button>
           </div>
         </div>
       </div>
@@ -1455,7 +1464,7 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
     {id:"materials", icon:"📚", label:"Study PDFs"},
     {id:"socials", icon:"🔗", label:"Social Links"},
     {id:"users",     icon:"👥", label:"Users"},
-    {id:"admins",    icon:"🛡", label:"Admin Access"},
+    {id:"admins",    icon:"🛡", label:"Access Control"},
     {id:"attempts",  icon:"📊", label:"Attempts"},
     {id:"suggestions", icon:"📌", label:"Suggestions"},
     {id:"ai",        icon:"🤖", label:"AI Generator"},
@@ -1464,16 +1473,16 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
   return (
     <>
       <style>{CSS}</style>
-      <div style={{display:"flex",minHeight:"100vh",background:"#020408"}}>
-        <aside style={{width:220,background:"#050810",borderRight:"1px solid #0E1A2C",display:"flex",flexDirection:"column",padding:"20px 12px",position:"sticky",top:0,height:"100vh",flexShrink:0}}>
+      <div className="admin-shell" style={{display:"flex",minHeight:"100vh",background:"#020408"}}>
+        <aside className="admin-sidebar" style={{width:220,background:"#050810",borderRight:"1px solid #0E1A2C",display:"flex",flexDirection:"column",padding:"20px 12px",position:"sticky",top:0,height:"100vh",flexShrink:0}}>
           <div style={{padding:"4px 6px 22px"}}>
             <div style={{fontFamily:"'Fira Code',monospace",fontSize:14,fontWeight:600,color:"#38BDF8",letterSpacing:2.5}}>MOCKIES</div>
-            <div style={{fontSize:9,color:"#253A52",letterSpacing:2,marginTop:2}}>ADMIN PANEL</div>
+            <div style={{fontSize:9,color:"#253A52",letterSpacing:2,marginTop:2}}>CONTROL PANEL</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,background:"#34D39912",border:"1px solid #34D39930",borderRadius:9,padding:"8px 12px",marginBottom:18}}>
             <span style={{width:7,height:7,borderRadius:"50%",background:"#34D399",animation:"pulse 2s infinite",flexShrink:0}}/>
             <span style={{fontSize:11,color:"#34D399",fontWeight:700}}>PLATFORM LIVE</span>
-            <span style={{marginLeft:"auto",fontSize:10,color:adminRole==="super_admin"?"#A78BFA":"#6A8CAC",fontWeight:700}}>{adminRole==="super_admin"?"SUPER":"ADMIN"}</span>
+            <span style={{marginLeft:"auto",fontSize:10,color:adminRole==="super_admin"?"#A78BFA":"#6A8CAC",fontWeight:700}}>{adminRole==="super_admin"?"SUPER":"USER"}</span>
           </div>
           <nav style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
             {nav.map(n=>(
@@ -1488,7 +1497,15 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
             <button className="btn btn-danger" style={{width:"100%",justifyContent:"center",fontSize:12}} onClick={async()=>{await supabase.auth.signOut();window.location.href="/login";}}>Sign Out</button>
           </div>
         </aside>
-        <div style={{flex:1,overflowY:"auto"}} key={page} className="fade-in">
+        <div className="admin-content" style={{flex:1,overflowY:"auto"}} key={page}>
+          <div className="mobile-switch">
+            <span className="mobile-title">MOCKIES</span>
+            <select className="select" value={page} onChange={(e)=>setPage(e.target.value)} style={{height:38,padding:"8px 10px"}}>
+              {nav.map((n)=><option key={n.id} value={n.id}>{n.label}</option>)}
+            </select>
+            <button className="btn btn-danger" style={{padding:"8px 10px",fontSize:12}} onClick={async()=>{await supabase.auth.signOut();window.location.href="/login";}}>Sign Out</button>
+          </div>
+          <div className="fade-in">
           {page==="dashboard" && <DashboardHome setPage={setPage}/>}
           {page==="questions" && <QuestionsPage/>}
           {page==="tests"     && <TestsPage/>}
@@ -1500,6 +1517,7 @@ export default function AdminPanel({ allowPasswordFallback = true }) {
           {page==="attempts"  && <AttemptsPage/>}
           {page==="suggestions" && <SuggestionsPage/>}
           {page==="ai"        && <AIGeneratorPage/>}
+          </div>
         </div>
       </div>
     </>

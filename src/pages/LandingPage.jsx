@@ -91,7 +91,7 @@ export default function LandingPage() {
     { q: "Is Mockies completely free?", a: "Yes. Mockies is free for students. Some future premium tools may be optional, but core mock tests remain free." },
     { q: "Are these tests like real exams?", a: "Yes. Interface, timer, navigation, and analytics are designed to match real CBT exam flow." },
     { q: "Can I use Mockies in Hindi?", a: "Yes. Hindi and Unicode-supported questions can be uploaded and displayed on platform." },
-    { q: "How often are tests updated?", a: "Admin team can publish and update tests daily from super-admin panel." }
+    { q: "How often are tests updated?", a: "Our team publishes and updates tests daily from the internal control panel." }
   ];
 
   useEffect(() => {
@@ -247,7 +247,7 @@ export default function LandingPage() {
       <footer className="footer">
         <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:18, fontWeight:700, color:"#E8B84B" }}>⚡ MOCKIES</div>
         <div style={{ display:"flex", gap:24 }}>
-          {[["Exams","#exams"],["Features","#features"],["Login","/login"],["Admin","/super-admin"],["Privacy","/privacy-policy"],["Terms","/terms-and-conditions"],["Disclaimer","/disclaimer"]].map(([l,h]) => (
+          {[["Exams","#exams"],["Features","#features"],["Login","/login"],["Privacy","/privacy-policy"],["Terms","/terms-and-conditions"],["Disclaimer","/disclaimer"]].map(([l,h]) => (
             <a key={l} href={h} style={{ color:"#7090B0", fontSize:13, textDecoration:"none" }}>{l}</a>
           ))}
         </div>
